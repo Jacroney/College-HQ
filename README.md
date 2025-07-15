@@ -1,61 +1,145 @@
-# College Student HQ
+# College HQ
 
-An AI-powered collaborative platform designed specifically for college students to navigate their academic journey, social life, and life decisions during their 4-year college career.
+A modern, AI-powered academic dashboard for college students, featuring a simple frontend and a scalable AWS backend. The platform currently includes an Advising Agent powered by Amazon Bedrock (Claude 3 Sonnet) for personalized academic guidance.
+
+---
 
 ## Features
 
-- **Smart Dashboard**: Hexagonal widget layout with AI-suggested priority items
-- **Custom Cursor**: Dynamic cursor states with contextual feedback
-- **Smart Schedule**: Fluid, zoomable timeline with AI-suggested optimal times
-- **Study Tools**: Collaborative study group management and resource sharing
-- **Social Coordination**: Event discovery and party planning tools
-- **Life Decision Support**: Goal tracking and AI-powered decision guidance
+- **Dashboard**: Clean, modern dashboard UI (React + MUI)
+- **Advising Agent**: Chat with an AI academic advisor (Claude 3 Sonnet via AWS Bedrock)
+- **Navigation**: Simple sidebar for easy access to Dashboard and Advising
 
-## Tech Stack
+---
 
-- React 18 with TypeScript
-- Material-UI for component library
-- Framer Motion for animations
-- Emotion for styled components
-- Socket.IO for real-time features
-- Vite for build tooling
+## Architecture Overview
+
+### Frontend
+
+- React 18 + TypeScript
+- Material-UI (MUI) for UI components
+- Framer Motion for animation
+- Advising chat page with real-time API integration
+- Minimalist: Only Dashboard, Advising, and Navigation components/pages remain
+
+### Backend (AWS Lambda)
+
+- Node.js Lambda function (`advising-agent`)
+- Amazon Bedrock (Claude 3 Sonnet) for LLM responses
+- AWS DynamoDB for user profiles and conversation history
+- REST API (POST /advising) for agent interaction
+- Environment variables for configuration
+
+---
 
 ## Getting Started
 
-1. Clone the repository
-2. Install dependencies:
+### Prerequisites
+
+- Node.js 18+
+- AWS account (free tier)
+- AWS CLI configured with credentials
+
+### Frontend Setup
+
+1. Install dependencies:
    ```bash
    npm install
    ```
-3. Start the development server:
+2. Start the development server:
    ```bash
    npm run dev
    ```
+3. Access the app at `http://localhost:5173` (default Vite port)
 
-## Project Structure
+#### Frontend Structure
 
 ```
 src/
-  ├── components/     # React components
-  ├── hooks/         # Custom React hooks
-  ├── theme/         # Theme configuration
-  ├── types/         # TypeScript type definitions
-  └── utils/         # Utility functions
+  components/
+    Dashboard/
+    Navigation/
+  pages/
+    Advising.tsx
+    Profile.tsx
+    NotFound.tsx
 ```
 
-## Design System
+- **Dashboard**: Main landing page
+- **Advising**: Chat interface for the advising agent
+- **Navigation**: Sidebar with links to Dashboard and Advising
 
-### Colors
-- Primary: Deep indigo blue (#4c6ef5)
-- Secondary: Vibrant teal (#20c997)
-- Accent: Warm orange (#ff922b)
-- Background: Clean white/light gray (#f8f9fa)
-- Text: Dark charcoal (#343a40)
+### Backend Setup (AWS Lambda Advising Agent)
 
-### Typography
-- Primary Font: Open Sans
-- Heading Font: Montserrat
-- Size Hierarchy: 24pt headings, 16pt body text, 14pt secondary text
+1. Go to `advising-agent/` directory:
+   ```bash
+   cd advising-agent
+   npm install
+   ```
+2. Configure AWS credentials (via environment, `.env`, or `~/.aws/credentials`)
+3. Deploy as a Lambda function (Node.js 18.x runtime recommended)
+4. Set environment variables:
+   - `AWS_REGION` (default: `us-east-1`)
+   - `USERS_TABLE` (DynamoDB table for user profiles)
+   - `CONVERSATIONS_TABLE` (DynamoDB table for conversations)
+
+#### Lambda API
+
+- **Endpoint:** `POST /advising`
+- **Request Body:**
+  ```json
+  {
+    "userId": "string",
+    "message": "string",
+    "conversationId": "string (optional)"
+  }
+  ```
+- **Response:**
+  ```json
+  {
+    "agent": "advising",
+    "userId": "string",
+    "conversationId": "string",
+    "response": "string (AI response)",
+    "timestamp": "ISO string"
+  }
+  ```
+
+#### Local Testing
+
+- Run the Lambda locally:
+  ```bash
+  node index.js
+  ```
+- Edit the test block in `index.js` to simulate requests
+
+---
+
+## AWS Stack
+
+- **Amazon Bedrock**: Claude 3 Sonnet for LLM responses
+- **AWS Lambda**: Serverless compute for the advising agent
+- **Amazon API Gateway**: (Recommended) to expose Lambda as REST endpoint
+- **Amazon DynamoDB**: Stores user profiles and conversation history
+- **IAM Roles/Policies**: Grant Lambda access to Bedrock and DynamoDB
+
+### Example Environment Variables
+
+```
+AWS_REGION=us-east-1
+USERS_TABLE=college-hq-users
+CONVERSATIONS_TABLE=college-hq-conversations
+```
+
+---
+
+## Usage
+
+- Log in to the frontend and navigate to the Advising page
+- Start a conversation with the AI advisor
+- All messages and context are stored in DynamoDB for continuity
+
+---
 
 ## Contributing
 
@@ -64,6 +148,8 @@ src/
 3. Commit your changes
 4. Push to the branch
 5. Create a new Pull Request
+
+---
 
 ## License
 
