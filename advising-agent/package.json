@@ -1,0 +1,15 @@
+{
+  "name": "advising-agent",
+  "version": "1.0.0",
+  "description": "AWS Lambda for advising agent using Bedrock Claude 3 Sonnet",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "test": "node index.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.500.0",
+    "aws-sdk": "^2.1561.0",
+    "dotenv": "^16.4.5"
+  }
+} 

@@ -1,0 +1,476 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --scrollbar-width: 8px;
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+  height: 100%;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #F8FAFC;
+  color: #1E293B;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
+
+#root {
+  height: 100%;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: var(--scrollbar-width);
+  height: var(--scrollbar-width);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Selection */
+::selection {
+  background: rgba(37, 99, 235, 0.2);
+  color: #1E40AF;
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid #2563EB;
+  outline-offset: 2px;
+}
+
+/* Smooth transitions */
+a, button {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Remove default button styles */
+button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* Remove default list styles */
+ul, ol {
+  list-style: none;
+}
+
+/* Remove default link styles */
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Remove default input styles */
+input, textarea, select {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* Remove default fieldset styles */
+fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Remove default legend styles */
+legend {
+  padding: 0;
+}
+
+/* Remove default table styles */
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+/* Remove default hr styles */
+hr {
+  border: none;
+  border-top: 1px solid #E2E8F0;
+  margin: 1rem 0;
+}
+
+/* Remove default blockquote styles */
+blockquote {
+  margin: 0;
+  padding: 0;
+}
+
+/* Remove default pre styles */
+pre {
+  margin: 0;
+  font-family: inherit;
+}
+
+/* Remove default code styles */
+code {
+  font-family: inherit;
+}
+
+/* Remove default img styles */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Remove default svg styles */
+svg {
+  display: block;
+}
+
+/* Remove default iframe styles */
+iframe {
+  border: none;
+}
+
+/* Remove default canvas styles */
+canvas {
+  display: block;
+}
+
+/* Remove default audio styles */
+audio {
+  display: block;
+}
+
+/* Remove default video styles */
+video {
+  display: block;
+}
+
+/* Remove default object styles */
+object {
+  display: block;
+}
+
+/* Remove default embed styles */
+embed {
+  display: block;
+}
+
+/* Remove default param styles */
+param {
+  display: none;
+}
+
+/* Remove default area styles */
+area {
+  display: none;
+}
+
+/* Remove default map styles */
+map {
+  display: none;
+}
+
+/* Remove default form styles */
+form {
+  margin: 0;
+}
+
+/* Remove default label styles */
+label {
+  cursor: pointer;
+}
+
+/* Remove default fieldset styles */
+fieldset {
+  min-width: 0;
+}
+
+/* Remove default progress styles */
+progress {
+  vertical-align: baseline;
+}
+
+/* Remove default meter styles */
+meter {
+  vertical-align: baseline;
+}
+
+/* Remove default details styles */
+details {
+  display: block;
+}
+
+/* Remove default summary styles */
+summary {
+  display: list-item;
+}
+
+/* Remove default template styles */
+template {
+  display: none;
+}
+
+/* Remove default slot styles */
+slot {
+  display: contents;
+}
+
+/* Remove default dialog styles */
+dialog {
+  display: block;
+  position: absolute;
+  left: 0;
+  right: 0;
+  width: -webkit-fit-content;
+  height: -webkit-fit-content;
+  margin: auto;
+  border: solid;
+  padding: 1em;
+  background: white;
+  color: black;
+}
+
+/* Remove default menu styles */
+menu {
+  display: block;
+  list-style-type: disc;
+  margin-block-start: 1em;
+  margin-block-end: 1em;
+  margin-inline-start: 0px;
+  margin-inline-end: 0px;
+  padding-inline-start: 40px;
+}
+
+/* Remove default menuitem styles */
+menuitem {
+  display: list-item;
+  text-align: -webkit-match-parent;
+}
+
+/* Remove default command styles */
+command {
+  display: none;
+}
+
+/* Remove default keygen styles */
+keygen {
+  display: none;
+}
+
+/* Remove default output styles */
+output {
+  display: inline;
+}
+
+/* Remove default progress styles */
+progress {
+  display: inline-block;
+  vertical-align: baseline;
+}
+
+/* Remove default meter styles */
+meter {
+  display: inline-block;
+  vertical-align: baseline;
+}
+
+/* Remove default canvas styles */
+canvas {
+  display: inline-block;
+}
+
+/* Remove default audio styles */
+audio:not([controls]) {
+  display: none;
+  height: 0;
+}
+
+/* Remove default video styles */
+video:not([controls]) {
+  display: none;
+  height: 0;
+}
+
+/* Remove default iframe styles */
+iframe:not([src]) {
+  display: none;
+  height: 0;
+}
+
+/* Remove default img styles */
+img:not([src]) {
+  display: none;
+  height: 0;
+}
+
+/* Remove default object styles */
+object:not([data]) {
+  display: none;
+  height: 0;
+}
+
+/* Remove default embed styles */
+embed:not([src]) {
+  display: none;
+  height: 0;
+}
+
+/* Remove default param styles */
+param:not([name]) {
+  display: none;
+}
+
+/* Remove default area styles */
+area:not([href]) {
+  display: none;
+}
+
+/* Remove default map styles */
+map:not([name]) {
+  display: none;
+}
+
+/* Remove default form styles */
+form:not([action]) {
+  display: none;
+}
+
+/* Remove default label styles */
+label:not([for]) {
+  display: none;
+}
+
+/* Remove default fieldset styles */
+fieldset:not([name]) {
+  display: none;
+}
+
+/* Remove default progress styles */
+progress:not([value]) {
+  display: none;
+}
+
+/* Remove default meter styles */
+meter:not([value]) {
+  display: none;
+}
+
+/* Remove default details styles */
+details:not([open]) {
+  display: none;
+}
+
+/* Remove default summary styles */
+summary:not([open]) {
+  display: none;
+}
+
+/* Remove default template styles */
+template:not([content]) {
+  display: none;
+}
+
+/* Remove default slot styles */
+slot:not([name]) {
+  display: none;
+}
+
+/* Remove default dialog styles */
+dialog:not([open]) {
+  display: none;
+}
+
+/* Remove default menu styles */
+menu:not([type]) {
+  display: none;
+}
+
+/* Remove default menuitem styles */
+menuitem:not([type]) {
+  display: none;
+}
+
+/* Remove default command styles */
+command:not([type]) {
+  display: none;
+}
+
+/* Remove default keygen styles */
+keygen:not([type]) {
+  display: none;
+}
+
+/* Remove default output styles */
+output:not([for]) {
+  display: none;
+}

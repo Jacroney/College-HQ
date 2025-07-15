@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="256" cy="256" r="256" fill="#4c6ef5"/>
+  
+  <!-- Book Shape -->
+  <path d="M128 128h256v256H128z" fill="#ffffff"/>
+  
+  <!-- Graduation Cap -->
+  <path d="M256 96l-128 64v64l128 64 128-64v-64l-128-64z" fill="#20c997"/>
+  
+  <!-- Decorative Elements -->
+  <circle cx="256" cy="256" r="32" fill="#ff922b"/>
+  <path d="M224 224l64 64M288 224l-64 64" stroke="#ffffff" stroke-width="8"/>
+</svg> 
