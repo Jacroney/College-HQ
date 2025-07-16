@@ -30,7 +30,6 @@ import {
   Notifications as NotificationsIcon,
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
-import { motion } from 'framer-motion';
 // TODO: Replace with AWS Cognito authentication
 
 const drawerWidth = 280;
@@ -86,7 +85,7 @@ const CompanyLogo = styled(Box)(({ theme }) => ({
   padding: theme.spacing(1),
 }));
 
-const AnimatedListItem = styled(motion(ListItem))(({ theme }) => ({
+const AnimatedListItem = styled(ListItem)(({ theme }) => ({
   borderRadius: theme.spacing(1.5),
   margin: theme.spacing(0.5, 1),
   transition: 'all 0.2s ease',
@@ -98,7 +97,7 @@ const AnimatedListItem = styled(motion(ListItem))(({ theme }) => ({
 const StyledListItemButton = styled(ListItemButton)(({ theme }) => ({
   borderRadius: theme.spacing(1.5),
   padding: theme.spacing(1.5, 2),
-  transition: 'all 0.3s ease',
+  transition: 'all 0.2s ease',
   '&.Mui-selected': {
     background: 'linear-gradient(135deg, #2563EB, #7C3AED)',
     color: theme.palette.primary.contrastText,
@@ -113,7 +112,6 @@ const StyledListItemButton = styled(ListItemButton)(({ theme }) => ({
   },
   '&:hover': {
     background: 'rgba(37, 99, 235, 0.08)',
-    transform: 'translateX(4px)',
   },
 }));
 
@@ -122,6 +120,8 @@ const MainContent = styled(Box)(({ theme }) => ({
   background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
   minHeight: '100vh',
   transition: 'all 0.3s ease',
+  marginLeft: 0,
+  width: '100%',
 }));
 
 const Navigation: React.FC = () => {
@@ -276,9 +276,6 @@ const Navigation: React.FC = () => {
           <AnimatedListItem 
             key={item.text} 
             disablePadding
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: index * 0.1 }}
           >
             <Tooltip 
               title={isCollapsed ? item.text : ''} 
@@ -339,7 +336,7 @@ const Navigation: React.FC = () => {
   );
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', width: '100%' }}>
       <IconButton
         color="inherit"
         aria-label="open drawer"
@@ -388,6 +385,8 @@ const Navigation: React.FC = () => {
             width: isCollapsed ? collapsedDrawerWidth : drawerWidth,
             transition: 'width 0.3s ease-in-out',
             overflowX: 'hidden',
+            position: 'fixed',
+            height: '100vh',
           },
         }}
         open
@@ -402,6 +401,8 @@ const Navigation: React.FC = () => {
           width: { 
             sm: `calc(100% - ${isCollapsed ? collapsedDrawerWidth : drawerWidth}px)` 
           },
+          marginLeft: { sm: `${isCollapsed ? collapsedDrawerWidth : drawerWidth}px` },
+          transition: 'margin-left 0.3s ease-in-out, width 0.3s ease-in-out',
         }}
       >
         <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
