@@ -15,25 +15,51 @@ import {
   Button,
   Alert,
   CircularProgress,
+  Checkbox,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  LinearProgress,
+  Card,
+  CardContent,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Badge,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import {
   Person as PersonIcon,
   School as SchoolIcon,
-  EmojiEvents as GoalsIcon,
   TrendingUp as ProgressIcon,
-  SupervisorAccount as AdvisorIcon,
   Save as SaveIcon,
   Email as EmailIcon,
   AssignmentInd as StudentIdIcon,
+  ExpandMore as ExpandMoreIcon,
+  CheckCircle as CheckCircleIcon,
+  RadioButtonUnchecked as UncheckedIcon,
+  Class as CourseIcon,
+  Timeline as TimelineIcon,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 
-// --- Types ---
+// --- Enhanced Types ---
 export interface University {
   name: string;
   domain: string;
   country: string;
+}
+
+export interface Course {
+  university_course_id: string;
+  course_code: string;
+  course_name: string;
+  units: number;
+  description: string;
+  prerequisites: string[];
+  difficulty_level: string;
+  required_for_majors: string[];
 }
 
 export interface StudentProfile {
@@ -57,162 +83,602 @@ export interface StudentProfile {
   advisorName: string;
   advisorEmail: string;
   advisorNotes: string;
+  // Enhanced course tracking
+  completedCourses: string[];
+  currentCourses: string[];
+  plannedCourses: string[];
 }
 
-// --- Dropdown Options ---
-const colleges = [
-  'College of Engineering',
-  'College of Science',
-  'College of Arts & Letters',
-  'College of Business',
-];
-const majors = [
-  'Computer Science',
-  'Mechanical Engineering',
-  'Business Administration',
-  'Psychology',
-  'Biology',
-];
-const concentrations = [
-  'Software Engineering',
-  'AI & Machine Learning',
-  'Entrepreneurship',
-  'Clinical Psychology',
-  'Genetics',
-];
-const minors = [
-  'Mathematics',
-  'Philosophy',
-  'Data Science',
-  'Economics',
-];
-const academicYears = [
-  'Freshman',
-  'Sophomore',
-  'Junior',
-  'Senior',
-  'Super Senior',
-];
-const learningStyles = [
-  'Visual',
-  'Auditory',
-  'Reading/Writing',
-  'Kinesthetic',
-  'Blended',
-];
-const careerGoalsList = [
-  'Software Engineer',
-  'Research Scientist',
-  'Startup Founder',
-  'Medical School',
-  'Graduate School',
-  'Data Analyst',
-  'Product Manager',
-];
-const academicInterestsList = [
-  'Artificial Intelligence',
-  'Web Development',
-  'Robotics',
-  'Psychology',
-  'Genetics',
-  'Finance',
-  'Philosophy',
-  'Design',
-];
+export interface DegreeProgress {
+  totalRequired: number;
+  completed: number;
+  inProgress: number;
+  remaining: number;
+  percentComplete: number;
+}
 
-// --- Styled Components ---
+// ====================================
+// STYLED COMPONENTS
+// ====================================
+
+/**
+ * Main container for the profile page with animation support
+ */
 const ProfileContainer = styled(motion(Box))(({ theme }) => ({
-  maxWidth: 900,
-  margin: '2rem auto',
-  padding: theme.spacing(4),
-  background: theme.palette.surface?.main || theme.palette.background.default,
-  borderRadius: theme.spacing(2),
-  boxShadow: theme.shadows[2],
+  maxWidth: 1400,
+  margin: '0 auto',
+  padding: theme.spacing(3),
+  background: 'transparent',
 }));
 
+/**
+ * Hero section with gradient background
+ */
+const HeroSection = styled(Box)(({ theme }) => ({
+  background: `linear-gradient(135deg, ${theme.palette.primary.main}15 0%, ${theme.palette.secondary.main}15 100%)`,
+  borderRadius: theme.spacing(3),
+  padding: theme.spacing(4),
+  marginBottom: theme.spacing(4),
+  border: `1px solid ${theme.palette.divider}`,
+  position: 'relative',
+  overflow: 'hidden',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: `linear-gradient(135deg, ${theme.palette.primary.main}08 0%, ${theme.palette.secondary.main}08 100%)`,
+    borderRadius: theme.spacing(3),
+  },
+}));
+
+/**
+ * Profile header with avatar and basic info
+ */
+const ProfileHeader = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.spacing(3),
+  marginBottom: theme.spacing(3),
+  position: 'relative',
+  zIndex: 1,
+}));
+
+/**
+ * Large avatar for profile header
+ */
+const ProfileAvatar = styled(Box)(({ theme }) => ({
+  width: 120,
+  height: 120,
+  borderRadius: '50%',
+  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  boxShadow: theme.shadows[3],
+  color: theme.palette.primary.contrastText,
+  fontSize: '3rem',
+  fontWeight: 'bold',
+  position: 'relative',
+  '&::after': {
+    content: '""',
+    position: 'absolute',
+    inset: 4,
+    borderRadius: '50%',
+    background: 'rgba(255, 255, 255, 0.1)',
+  },
+}));
+
+/**
+ * Paper component for individual profile sections
+ */
 const SectionPaper = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(3),
+  padding: theme.spacing(4),
   marginBottom: theme.spacing(3),
   background: theme.palette.surface?.paper || theme.palette.background.paper,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: theme.spacing(2),
+  boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)',
+  transition: 'all 0.3s ease',
+  '&:hover': {
+    boxShadow: '0 4px 24px rgba(0, 0, 0, 0.08)',
+    transform: 'translateY(-2px)',
+  },
 }));
 
+/**
+ * Header styling for each profile section
+ */
 const SectionHeader = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   gap: theme.spacing(1.5),
-  marginBottom: theme.spacing(2),
+  marginBottom: theme.spacing(3),
+  paddingBottom: theme.spacing(2),
+  borderBottom: `2px solid ${theme.palette.divider}`,
 }));
 
-const SaveButton = styled(Button)(({ theme }) => ({
-  marginTop: theme.spacing(2),
-  minWidth: 140,
+const CourseChecklistItem = styled(ListItem)(({ theme }) => ({
+  borderRadius: theme.spacing(1),
+  marginBottom: theme.spacing(0.5),
+  '&:hover': {
+    backgroundColor: theme.palette.action.hover,
+  },
 }));
 
-// --- Placeholder Data ---
-const placeholderProfile: StudentProfile = {
-  firstName: 'Jane',
-  lastName: 'Doe',
-  email: 'jane.doe@stateu.edu',
-  studentId: 'S1234567',
-  university: { name: 'Stanford University', domain: 'stanford.edu', country: 'USA' },
-  college: 'College of Engineering',
-  major: 'Computer Science',
-  concentration: 'Software Engineering',
-  minor: 'Mathematics',
-  academicYear: 'Junior',
-  expectedGraduation: '2025-05',
-  gpa: 3.6,
-  totalCredits: 92,
-  currentSemesterCredits: 16,
-  careerGoals: ['Software Engineer', 'Startup Founder'],
-  learningStyle: 'Blended',
-  academicInterests: ['Artificial Intelligence', 'Web Development'],
-  advisorName: 'Dr. Alan Turing',
-  advisorEmail: 'aturing@stateu.edu',
-  advisorNotes: 'Excellent progress. Consider research opportunities.',
-};
+/**
+ * Progress card with gradient background
+ */
+const ProgressCard = styled(Card)(({ theme }) => ({
+  background: `linear-gradient(135deg, ${theme.palette.success.main}08, ${theme.palette.info.main}08)`,
+  border: `1px solid ${theme.palette.success.main}30`,
+  borderRadius: theme.spacing(2),
+  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
+  transition: 'all 0.3s ease',
+  '&:hover': {
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+    transform: 'translateY(-4px)',
+  },
+}));
 
-// --- API Placeholders ---
-async function loadProfile(): Promise<StudentProfile> {
-  // TODO: Integrate with AWS backend
-  return new Promise((resolve) => setTimeout(() => resolve(placeholderProfile), 800));
+/**
+ * Stats container for displaying metrics
+ */
+const StatsContainer = styled(Box)(({ theme }) => ({
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+  gap: theme.spacing(2),
+  marginBottom: theme.spacing(3),
+}));
+
+/**
+ * Individual stat card
+ */
+const StatCard = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(2.5),
+  background: theme.palette.surface?.paper || theme.palette.background.paper,
+  borderRadius: theme.spacing(1.5),
+  border: `1px solid ${theme.palette.divider}`,
+  textAlign: 'center',
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    background: theme.palette.surface?.elevated || theme.palette.background.default,
+    transform: 'translateY(-1px)',
+  },
+}));
+
+// --- API Functions ---
+const API_BASE_URL = 'https://lm8ngppg22.execute-api.us-east-1.amazonaws.com/dev';
+
+// Get current user ID (you'll need to implement proper auth)
+function getCurrentUserId(): string {
+  // For now, generate a consistent user ID based on browser
+  // In production, this would come from your authentication system
+  let userId = localStorage.getItem('college_hq_user_id');
+  if (!userId) {
+    userId = 'user_' + Math.random().toString(36).substring(2, 15);
+    localStorage.setItem('college_hq_user_id', userId);
+  }
+  return userId;
 }
-async function saveProfile(profile: StudentProfile): Promise<void> {
-  // TODO: Integrate with AWS backend
-  console.log('Saving profile:', profile);
-  return new Promise((resolve) => setTimeout(resolve, 1200));
+
+async function loadUniversities(): Promise<University[]> {
+  // This would typically come from your course catalog
+  return [
+    { name: "Cal Poly San Luis Obispo", domain: "calpoly.edu", country: "USA" },
+    { name: "Stanford University", domain: "stanford.edu", country: "USA" },
+    { name: "University of California, Berkeley", domain: "berkeley.edu", country: "USA" },
+  ];
+}
+
+async function loadCoursesForUniversity(universityName: string): Promise<Course[]> {
+  try {
+    console.log('Loading courses for university:', universityName);
+    
+    // This will eventually call your course catalog API
+    // For now, return the sample courses to test the system
+    const sampleCourses: Course[] = [
+      {
+        university_course_id: "calpoly_csc101",
+        course_code: "CSC 101",
+        course_name: "Fundamentals of Computer Science",
+        units: 4,
+        description: "Basic principles of algorithmic problem solving and programming using Python. Covers variables, data types, control structures, functions, and basic data structures.",
+        prerequisites: [],
+        difficulty_level: "Introductory",
+        required_for_majors: ["Computer Science"]
+      },
+      {
+        university_course_id: "calpoly_csc202",
+        course_code: "CSC 202",
+        course_name: "Data Structures",
+        units: 4,
+        description: "Implementation and analysis of fundamental data structures including arrays, linked lists, stacks, queues, trees, and hash tables.",
+        prerequisites: ["CSC 101"],
+        difficulty_level: "Intermediate",
+        required_for_majors: ["Computer Science"]
+      },
+      {
+        university_course_id: "calpoly_csc203",
+        course_code: "CSC 203",
+        course_name: "Project-Based Object-Oriented Programming",
+        units: 4,
+        description: "Advanced programming using object-oriented techniques. Large-scale software development and design patterns using Java.",
+        prerequisites: ["CSC 202"],
+        difficulty_level: "Intermediate",
+        required_for_majors: ["Computer Science"]
+      },
+      {
+        university_course_id: "calpoly_csc225",
+        course_code: "CSC 225",
+        course_name: "Computer Organization",
+        units: 4,
+        description: "Introduction to computer organization and assembly language programming. Number systems and basic computer architecture.",
+        prerequisites: ["CSC 202"],
+        difficulty_level: "Intermediate",
+        required_for_majors: ["Computer Science"]
+      },
+      {
+        university_course_id: "calpoly_csc348",
+        course_code: "CSC 348",
+        course_name: "Discrete Structures",
+        units: 4,
+        description: "Discrete mathematical structures and their applications to computer science including logic, sets, functions, and graph theory.",
+        prerequisites: ["CSC 202", "MATH 141"],
+        difficulty_level: "Intermediate",
+        required_for_majors: ["Computer Science"]
+      },
+      {
+        university_course_id: "calpoly_math141",
+        course_code: "MATH 141",
+        course_name: "Calculus I",
+        units: 4,
+        description: "Limits, derivatives, applications of derivatives, introduction to integration. Designed for students in mathematics, science, and engineering.",
+        prerequisites: [],
+        difficulty_level: "Intermediate",
+        required_for_majors: ["Computer Science", "Engineering", "Mathematics"]
+      },
+      {
+        university_course_id: "calpoly_math142",
+        course_code: "MATH 142",
+        course_name: "Calculus II",
+        units: 4,
+        description: "Techniques of integration, applications of integration, infinite sequences and series.",
+        prerequisites: ["MATH 141"],
+        difficulty_level: "Intermediate",
+        required_for_majors: ["Computer Science", "Engineering", "Mathematics"]
+      },
+      {
+        university_course_id: "calpoly_math143",
+        course_code: "MATH 143",
+        course_name: "Calculus III",
+        units: 4,
+        description: "Infinite sequences and series, vector algebra, parametric curves.",
+        prerequisites: ["MATH 142"],
+        difficulty_level: "Intermediate",
+        required_for_majors: ["Computer Science", "Engineering", "Mathematics"]
+      }
+    ];
+
+    // Filter courses for the specific university
+    if (universityName === "Cal Poly San Luis Obispo") {
+      return sampleCourses;
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Error loading courses:', error);
+    return [];
+  }
+}
+
+async function loadMajorsForUniversity(universityName: string): Promise<string[]> {
+  if (universityName === "Cal Poly San Luis Obispo") {
+    return [
+      "Computer Science",
+      "Software Engineering", 
+      "Computer Engineering",
+      "Mechanical Engineering",
+      "Civil Engineering",
+      "Business Administration",
+      "Mathematics"
+    ];
+  }
+  return ["Computer Science", "Engineering", "Business"];
+}
+
+async function loadConcentrationsForMajor(major: string): Promise<string[]> {
+  if (major === "Computer Science") {
+    return [
+      "Software Engineering",
+      "AI & Machine Learning", 
+      "Cybersecurity",
+      "Data Science",
+      "Human-Computer Interaction"
+    ];
+  }
+  return [];
 }
 
 // --- Main Component ---
 const Profile: React.FC = () => {
+  // Existing state
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Enhanced state for course tracking
   const [universities, setUniversities] = useState<University[]>([]);
+  const [availableMajors, setAvailableMajors] = useState<string[]>([]);
+  const [availableConcentrations, setAvailableConcentrations] = useState<string[]>([]);
+  const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
+  const [degreeProgress, setDegreeProgress] = useState<DegreeProgress | null>(null);
 
+  // Load initial data
   useEffect(() => {
-    setLoading(true);
-    loadProfile()
-      .then((data) => setProfile(data))
-      .catch(() => setError('Failed to load profile'))
-      .finally(() => setLoading(false));
+    const initializeData = async () => {
+      setLoading(true);
+      try {
+        const [universitiesData, profileData] = await Promise.all([
+          loadUniversities(),
+          loadProfile()
+        ]);
+        
+        setUniversities(universitiesData);
+        setProfile(profileData);
+        
+        if (profileData.university) {
+          await loadUniversityData(profileData.university.name);
+        }
+      } catch (err) {
+        setError('Failed to load profile data');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    initializeData();
   }, []);
 
-  useEffect(() => {
-    fetch('/universities.json')
-      .then(res => res.json())
-      .then(setUniversities)
-      .catch(() => setUniversities([]));
-  }, []);
-
-  const handleFieldChange = <K extends keyof StudentProfile>(key: K, value: StudentProfile[K]) => {
-    setProfile((prev) => prev ? { ...prev, [key]: value } : prev);
+  // Load university-specific data when university changes
+  const loadUniversityData = async (universityName: string) => {
+    try {
+      const [majorsData, coursesData] = await Promise.all([
+        loadMajorsForUniversity(universityName),
+        loadCoursesForUniversity(universityName)
+      ]);
+      
+      setAvailableMajors(majorsData);
+      setAvailableCourses(coursesData);
+    } catch (err) {
+      console.error('Error loading university data:', err);
+    }
   };
 
+  // Load concentrations when major changes
+  const loadConcentrationData = async (major: string) => {
+    try {
+      const concentrations = await loadConcentrationsForMajor(major);
+      setAvailableConcentrations(concentrations);
+    } catch (err) {
+      console.error('Error loading concentrations:', err);
+    }
+  };
+
+  // Calculate degree progress
+  const calculateDegreeProgress = (): DegreeProgress => {
+    if (!profile || !availableCourses.length) {
+      return { totalRequired: 0, completed: 0, inProgress: 0, remaining: 0, percentComplete: 0 };
+    }
+
+    const requiredCourses = availableCourses.filter(course => 
+      course.required_for_majors.includes(profile.major)
+    );
+    
+    const totalRequired = requiredCourses.length;
+    const completed = profile.completedCourses.length;
+    const inProgress = profile.currentCourses.length;
+    const remaining = Math.max(0, totalRequired - completed - inProgress);
+    const percentComplete = totalRequired > 0 ? (completed / totalRequired) * 100 : 0;
+
+    return { totalRequired, completed, inProgress, remaining, percentComplete };
+  };
+
+  // Handle field changes
+  const handleFieldChange = <K extends keyof StudentProfile>(key: K, value: StudentProfile[K]) => {
+    setProfile((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, [key]: value };
+      
+      // Handle cascading changes
+      if (key === 'university' && value) {
+        const uni = value as University;
+        loadUniversityData(uni.name);
+        updated.major = '';
+        updated.concentration = '';
+      } else if (key === 'major' && value) {
+        loadConcentrationData(value as string);
+        updated.concentration = '';
+      }
+      
+      return updated;
+    });
+  };
+
+  // Handle course completion toggles
+  const handleCourseToggle = (courseCode: string, listType: 'completed' | 'current' | 'planned') => {
+    if (!profile) return;
+
+    const currentList = profile[`${listType}Courses`] as string[];
+    const otherLists = [
+      listType !== 'completed' ? 'completedCourses' : null,
+      listType !== 'current' ? 'currentCourses' : null,
+      listType !== 'planned' ? 'plannedCourses' : null,
+    ].filter(Boolean) as (keyof StudentProfile)[];
+
+    let updatedList: string[];
+    if (currentList.includes(courseCode)) {
+      // Remove from current list
+      updatedList = currentList.filter(code => code !== courseCode);
+    } else {
+      // Add to current list and remove from others
+      updatedList = [...currentList, courseCode];
+      
+      // Remove from other lists to avoid duplicates
+      otherLists.forEach(listKey => {
+        const otherList = profile[listKey] as string[];
+        if (otherList.includes(courseCode)) {
+          handleFieldChange(listKey, otherList.filter(code => code !== courseCode));
+        }
+      });
+    }
+
+    handleFieldChange(`${listType}Courses` as keyof StudentProfile, updatedList);
+  };
+
+  // Group courses by category
+  const groupedCourses = React.useMemo(() => {
+    if (!availableCourses.length || !profile) return {};
+
+    const groups: { [key: string]: Course[] } = {
+      'Core Requirements': [],
+      'Major Requirements': [],
+      'Mathematics': [],
+      'Science': [],
+      'Electives': []
+    };
+
+    availableCourses.forEach(course => {
+      if (course.course_code.startsWith('CSC') && parseInt(course.course_code.split(' ')[1]) < 300) {
+        groups['Core Requirements'].push(course);
+      } else if (course.course_code.startsWith('CSC')) {
+        groups['Major Requirements'].push(course);
+      } else if (course.course_code.startsWith('MATH')) {
+        groups['Mathematics'].push(course);
+      } else if (course.course_code.startsWith('STAT') || course.course_code.startsWith('PHYS')) {
+        groups['Science'].push(course);
+      } else {
+        groups['Electives'].push(course);
+      }
+    });
+
+    return groups;
+  }, [availableCourses, profile]);
+
+  const renderCourseChecklist = () => {
+    if (!profile || !availableCourses.length) {
+      return (
+        <Alert severity="info">
+          Select a university and major to see your course requirements.
+        </Alert>
+      );
+    }
+
+    return Object.entries(groupedCourses).map(([category, courses]) => {
+      if (!courses.length) return null;
+
+      const completedCount = courses.filter(course => 
+        profile.completedCourses.includes(course.course_code)
+      ).length;
+
+      return (
+        <Accordion key={category} defaultExpanded={category === 'Core Requirements'}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+              <Typography variant="h6">{category}</Typography>
+              <Badge 
+                badgeContent={`${completedCount}/${courses.length}`} 
+                color={completedCount === courses.length ? "success" : "primary"}
+              />
+            </Box>
+          </AccordionSummary>
+          <AccordionDetails>
+            <List dense>
+              {courses.map(course => {
+                const isCompleted = profile.completedCourses.includes(course.course_code);
+                const isCurrent = profile.currentCourses.includes(course.course_code);
+                const isPlanned = profile.plannedCourses.includes(course.course_code);
+
+                return (
+                  <CourseChecklistItem key={course.university_course_id}>
+                    <ListItemIcon>
+                      <Checkbox
+                        edge="start"
+                        checked={isCompleted}
+                        icon={<UncheckedIcon />}
+                        checkedIcon={<CheckCircleIcon />}
+                        onChange={() => handleCourseToggle(course.course_code, 'completed')}
+                      />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography 
+                            variant="body1" 
+                            sx={{ 
+                              textDecoration: isCompleted ? 'line-through' : 'none',
+                              fontWeight: isCompleted ? 'normal' : 'medium'
+                            }}
+                          >
+                            {course.course_code} - {course.course_name}
+                          </Typography>
+                          <Chip 
+                            label={`${course.units} units`} 
+                            size="small" 
+                            variant="outlined" 
+                          />
+                          {isCurrent && <Chip label="Current" size="small" color="primary" />}
+                          {isPlanned && <Chip label="Planned" size="small" color="secondary" />}
+                        </Box>
+                      }
+                      secondary={
+                        <Box>
+                          <Typography variant="body2" color="textSecondary">
+                            {course.description.substring(0, 100)}...
+                          </Typography>
+                          {course.prerequisites.length > 0 && (
+                            <Typography variant="caption" color="textSecondary">
+                              Prerequisites: {course.prerequisites.join(', ')}
+                            </Typography>
+                          )}
+                        </Box>
+                      }
+                    />
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                      <Button
+                        size="small"
+                        variant={isCurrent ? "contained" : "outlined"}
+                        onClick={() => handleCourseToggle(course.course_code, 'current')}
+                        disabled={isCompleted}
+                      >
+                        Current
+                      </Button>
+                      <Button
+                        size="small"
+                        variant={isPlanned ? "contained" : "outlined"}
+                        onClick={() => handleCourseToggle(course.course_code, 'planned')}
+                        disabled={isCompleted || isCurrent}
+                      >
+                        Planned
+                      </Button>
+                    </Box>
+                  </CourseChecklistItem>
+                );
+              })}
+            </List>
+          </AccordionDetails>
+        </Accordion>
+      );
+    });
+  };
+
+  const progress = calculateDegreeProgress();
+
+  // Save function
   const handleSave = async () => {
     if (!profile) return;
     setSaving(true);
@@ -228,30 +694,94 @@ const Profile: React.FC = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <ProfileContainer>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300 }}>
+          <CircularProgress />
+        </Box>
+      </ProfileContainer>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <ProfileContainer>
+        <Alert severity="error">Profile not found.</Alert>
+      </ProfileContainer>
+    );
+  }
+
   return (
     <ProfileContainer
       initial={{ opacity: 0, y: 40 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <Typography variant="h4" sx={{ mb: 4, fontWeight: 700 }}>
-        Student Profile
-      </Typography>
+      {/* Hero Section */}
+      <HeroSection>
+        <ProfileHeader>
+          <ProfileAvatar>
+            {profile?.firstName?.charAt(0)?.toUpperCase() || 'S'}
+            {profile?.lastName?.charAt(0)?.toUpperCase() || 'U'}
+          </ProfileAvatar>
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="h3" sx={{ fontWeight: 700, mb: 1, color: 'text.primary' }}>
+              {profile?.firstName && profile?.lastName 
+                ? `${profile.firstName} ${profile.lastName}`
+                : 'Student Profile'
+              }
+            </Typography>
+            <Typography variant="h6" sx={{ color: 'text.secondary', mb: 2 }}>
+              {profile?.major || 'Select your major'} • {profile?.academicYear || 'Academic Year'}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              {profile?.university && (
+                <Chip 
+                  label={profile.university.name} 
+                  color="primary" 
+                  variant="outlined"
+                  size="small"
+                />
+              )}
+              {profile?.concentration && (
+                <Chip 
+                  label={profile.concentration} 
+                  color="secondary" 
+                  variant="outlined"
+                  size="small"
+                />
+              )}
+              {profile?.gpa > 0 && (
+                <Chip 
+                  label={`GPA: ${profile.gpa.toFixed(2)}`} 
+                  color="success" 
+                  variant="outlined"
+                  size="small"
+                />
+              )}
+            </Box>
+          </Box>
+        </ProfileHeader>
+      </HeroSection>
 
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300 }}>
-          <CircularProgress />
-        </Box>
-      ) : profile ? (
-        <>
-          {success && <Alert severity="success" sx={{ mb: 2 }}>Profile saved successfully!</Alert>}
-          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {/* Success/Error Messages */}
+      {success && <Alert severity="success" sx={{ mb: 3 }}>Profile saved successfully!</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
+      <Grid container spacing={3}>
+        {/* Left Column - Profile Information */}
+        <Grid item xs={12} md={6}>
           {/* Personal Information */}
           <SectionPaper>
             <SectionHeader>
-              <PersonIcon color="primary" />
-              <Typography variant="h6">Personal Information</Typography>
+              <PersonIcon color="primary" sx={{ fontSize: 28 }} />
+              <Box>
+                <Typography variant="h5" sx={{ fontWeight: 700 }}>Personal Information</Typography>
+                <Typography variant="body2" color="textSecondary">
+                  Your basic profile details
+                </Typography>
+              </Box>
             </SectionHeader>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
@@ -272,7 +802,7 @@ const Profile: React.FC = () => {
                   required
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12}>
                 <TextField
                   label="Email"
                   value={profile.email}
@@ -282,7 +812,7 @@ const Profile: React.FC = () => {
                   InputProps={{ startAdornment: <EmailIcon sx={{ mr: 1 }} /> }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12}>
                 <TextField
                   label="Student ID"
                   value={profile.studentId}
@@ -298,32 +828,24 @@ const Profile: React.FC = () => {
           {/* Academic Information */}
           <SectionPaper>
             <SectionHeader>
-              <SchoolIcon color="primary" />
-              <Typography variant="h6">Academic Information</Typography>
+              <SchoolIcon color="primary" sx={{ fontSize: 28 }} />
+              <Box>
+                <Typography variant="h5" sx={{ fontWeight: 700 }}>Academic Information</Typography>
+                <Typography variant="body2" color="textSecondary">
+                  Your university and program details
+                </Typography>
+              </Box>
             </SectionHeader>
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12}>
                 <Autocomplete
                   options={universities}
                   getOptionLabel={(option) => option.name}
                   value={profile.university}
                   onChange={(_, value) => handleFieldChange('university', value)}
-                  renderInput={(params) => <TextField {...params} label="University" fullWidth />}
+                  renderInput={(params) => <TextField {...params} label="University" fullWidth required />}
                   isOptionEqualToValue={(option, value) => !!option && !!value && option.name === value.name}
-                  loading={universities.length === 0}
                 />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel>College</InputLabel>
-                  <Select
-                    value={profile.college}
-                    label="College"
-                    onChange={e => handleFieldChange('college', e.target.value)}
-                  >
-                    {colleges.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
-                  </Select>
-                </FormControl>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth>
@@ -332,8 +854,9 @@ const Profile: React.FC = () => {
                     value={profile.major}
                     label="Major"
                     onChange={e => handleFieldChange('major', e.target.value)}
+                    disabled={!profile.university}
                   >
-                    {majors.map(m => <MenuItem key={m} value={m}>{m}</MenuItem>)}
+                    {availableMajors.map(m => <MenuItem key={m} value={m}>{m}</MenuItem>)}
                   </Select>
                 </FormControl>
               </Grid>
@@ -344,20 +867,9 @@ const Profile: React.FC = () => {
                     value={profile.concentration}
                     label="Concentration"
                     onChange={e => handleFieldChange('concentration', e.target.value)}
+                    disabled={!profile.major}
                   >
-                    {concentrations.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Minor</InputLabel>
-                  <Select
-                    value={profile.minor}
-                    label="Minor"
-                    onChange={e => handleFieldChange('minor', e.target.value)}
-                  >
-                    {minors.map(m => <MenuItem key={m} value={m}>{m}</MenuItem>)}
+                    {availableConcentrations.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
                   </Select>
                 </FormControl>
               </Grid>
@@ -369,7 +881,9 @@ const Profile: React.FC = () => {
                     label="Academic Year"
                     onChange={e => handleFieldChange('academicYear', e.target.value)}
                   >
-                    {academicYears.map(y => <MenuItem key={y} value={y}>{y}</MenuItem>)}
+                    {['Freshman', 'Sophomore', 'Junior', 'Senior', 'Super Senior'].map(y => 
+                      <MenuItem key={y} value={y}>{y}</MenuItem>
+                    )}
                   </Select>
                 </FormControl>
               </Grid>
@@ -388,23 +902,28 @@ const Profile: React.FC = () => {
           {/* Academic Progress */}
           <SectionPaper>
             <SectionHeader>
-              <ProgressIcon color="primary" />
-              <Typography variant="h6">Academic Progress</Typography>
+              <ProgressIcon color="primary" sx={{ fontSize: 28 }} />
+              <Box>
+                <Typography variant="h5" sx={{ fontWeight: 700 }}>Academic Progress</Typography>
+                <Typography variant="body2" color="textSecondary">
+                  Your GPA and credit information
+                </Typography>
+              </Box>
             </SectionHeader>
-            <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} sm={6}>
-                <Typography gutterBottom>Current GPA</Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <Typography gutterBottom>Current GPA: {profile.gpa}</Typography>
                 <Slider
                   value={profile.gpa}
                   min={0}
                   max={4}
                   step={0.01}
                   marks={[{ value: 0, label: '0.0' }, { value: 4, label: '4.0' }]}
-                  valueLabelDisplay="on"
+                  valueLabelDisplay="auto"
                   onChange={(_, value) => handleFieldChange('gpa', value as number)}
                 />
               </Grid>
-              <Grid item xs={12} sm={3}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   label="Total Credits"
                   type="number"
@@ -413,7 +932,7 @@ const Profile: React.FC = () => {
                   fullWidth
                 />
               </Grid>
-              <Grid item xs={12} sm={3}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   label="Current Semester Credits"
                   type="number"
@@ -424,114 +943,227 @@ const Profile: React.FC = () => {
               </Grid>
             </Grid>
           </SectionPaper>
+        </Grid>
 
-          {/* Goals & Interests */}
+        {/* Right Column - Course Tracking */}
+        <Grid item xs={12} md={6}>
+          {/* Degree Progress */}
+          <ProgressCard sx={{ mb: 3 }}>
+            <CardContent>
+              <SectionHeader>
+                <TimelineIcon color="primary" />
+                <Typography variant="h6">Degree Progress</Typography>
+              </SectionHeader>
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  {Math.round(progress.percentComplete)}% Complete
+                </Typography>
+                <LinearProgress 
+                  variant="determinate" 
+                  value={progress.percentComplete} 
+                  sx={{ height: 8, borderRadius: 4 }}
+                />
+              </Box>
+              <Grid container spacing={2}>
+                <Grid item xs={3}>
+                  <Typography align="center" variant="h6" color="success.main">
+                    {progress.completed}
+                  </Typography>
+                  <Typography align="center" variant="caption">
+                    Completed
+                  </Typography>
+                </Grid>
+                <Grid item xs={3}>
+                  <Typography align="center" variant="h6" color="primary.main">
+                    {progress.inProgress}
+                  </Typography>
+                  <Typography align="center" variant="caption">
+                    In Progress
+                  </Typography>
+                </Grid>
+                <Grid item xs={3}>
+                  <Typography align="center" variant="h6" color="warning.main">
+                    {progress.remaining}
+                  </Typography>
+                  <Typography align="center" variant="caption">
+                    Remaining
+                  </Typography>
+                </Grid>
+                <Grid item xs={3}>
+                  <Typography align="center" variant="h6">
+                    {progress.totalRequired}
+                  </Typography>
+                  <Typography align="center" variant="caption">
+                    Total
+                  </Typography>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </ProgressCard>
+
+          {/* Course Checklist */}
           <SectionPaper>
             <SectionHeader>
-              <GoalsIcon color="primary" />
-              <Typography variant="h6">Goals & Interests</Typography>
+              <CourseIcon color="primary" />
+              <Typography variant="h6">Course Requirements</Typography>
             </SectionHeader>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <Autocomplete
-                  multiple
-                  options={careerGoalsList}
-                  value={profile.careerGoals}
-                  onChange={(_, value) => handleFieldChange('careerGoals', value)}
-                  renderTags={(value: string[], getTagProps) =>
-                    value.map((option: string, index: number) => (
-                      <Chip label={option} {...getTagProps({ index })} key={option} />
-                    ))
-                  }
-                  renderInput={(params) => (
-                    <TextField {...params} label="Career Goals" placeholder="Add goal" />
-                  )}
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Learning Style</InputLabel>
-                  <Select
-                    value={profile.learningStyle}
-                    label="Learning Style"
-                    onChange={e => handleFieldChange('learningStyle', e.target.value)}
-                  >
-                    {learningStyles.map(l => <MenuItem key={l} value={l}>{l}</MenuItem>)}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12}>
-                <Autocomplete
-                  multiple
-                  options={academicInterestsList}
-                  value={profile.academicInterests}
-                  onChange={(_, value) => handleFieldChange('academicInterests', value)}
-                  renderTags={(value: string[], getTagProps) =>
-                    value.map((option: string, index: number) => (
-                      <Chip label={option} {...getTagProps({ index })} key={option} />
-                    ))
-                  }
-                  renderInput={(params) => (
-                    <TextField {...params} label="Academic Interests" placeholder="Add interest" />
-                  )}
-                  fullWidth
-                />
-              </Grid>
-            </Grid>
+            {renderCourseChecklist()}
           </SectionPaper>
+        </Grid>
+      </Grid>
 
-          {/* Advisor Information */}
-          <SectionPaper>
-            <SectionHeader>
-              <AdvisorIcon color="primary" />
-              <Typography variant="h6">Advisor Information</Typography>
-            </SectionHeader>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Advisor Name"
-                  value={profile.advisorName}
-                  onChange={e => handleFieldChange('advisorName', e.target.value)}
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Advisor Email"
-                  value={profile.advisorEmail}
-                  onChange={e => handleFieldChange('advisorEmail', e.target.value)}
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  label="Additional Notes"
-                  value={profile.advisorNotes}
-                  onChange={e => handleFieldChange('advisorNotes', e.target.value)}
-                  fullWidth
-                  multiline
-                  minRows={2}
-                />
-              </Grid>
-            </Grid>
-          </SectionPaper>
-
-          <SaveButton
-            variant="contained"
-            color="primary"
-            startIcon={saving ? <CircularProgress size={18} /> : <SaveIcon />}
-            onClick={handleSave}
-            disabled={saving}
-          >
-            {saving ? 'Saving...' : 'Save Profile'}
-          </SaveButton>
-        </>
-      ) : (
-        <Alert severity="error">Profile not found.</Alert>
-      )}
+      {/* Save Button */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 6 }}>
+        <Button
+          variant="contained"
+          size="large"
+          startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+          onClick={handleSave}
+          disabled={saving}
+          sx={{ 
+            minWidth: 250,
+            py: 1.5,
+            px: 4,
+            borderRadius: 3,
+            fontSize: '1.1rem',
+            fontWeight: 600,
+            textTransform: 'none',
+            background: 'linear-gradient(45deg, #2563EB, #7C3AED)',
+            boxShadow: '0 4px 20px rgba(37, 99, 235, 0.3)',
+            '&:hover': {
+              background: 'linear-gradient(45deg, #1E40AF, #5B21B6)',
+              boxShadow: '0 8px 32px rgba(37, 99, 235, 0.4)',
+              transform: 'translateY(-2px)',
+            },
+            '&:disabled': {
+              background: 'linear-gradient(45deg, #94A3B8, #CBD5E1)',
+              boxShadow: 'none',
+            },
+          }}
+        >
+          {saving ? 'Saving Profile...' : 'Save Profile & Courses'}
+        </Button>
+      </Box>
     </ProfileContainer>
   );
 };
 
-export default Profile; 
+// Placeholder functions (you'll replace these with real API calls)
+async function loadProfile(): Promise<StudentProfile> {
+  try {
+    const userId = getCurrentUserId();
+    console.log('Loading profile for user:', userId);
+    
+    const response = await fetch(`${API_BASE_URL}/profile/${userId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Profile loaded:', data);
+    
+    return data.profile;
+  } catch (error) {
+    console.error('Error loading profile:', error);
+    // Return default profile if loading fails
+    return createDefaultProfile();
+  }
+}
+
+async function saveProfile(profile: StudentProfile): Promise<void> {
+  try {
+    const userId = getCurrentUserId();
+    console.log('Saving profile for user:', userId, profile);
+    
+    const response = await fetch(`${API_BASE_URL}/profile/${userId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(profile),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Profile saved successfully:', data);
+  } catch (error) {
+    console.error('Error saving profile:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create a default profile with empty values
+ * @returns {StudentProfile} Default profile object
+ */
+function createDefaultProfile(): StudentProfile {
+  return {
+    firstName: '',
+    lastName: '',
+    email: '',
+    studentId: '',
+    university: null,
+    college: '',
+    major: '',
+    concentration: '',
+    minor: '',
+    academicYear: '',
+    expectedGraduation: '',
+    gpa: 0,
+    totalCredits: 0,
+    currentSemesterCredits: 0,
+    careerGoals: [],
+    learningStyle: '',
+    academicInterests: [],
+    advisorName: '',
+    advisorEmail: '',
+    advisorNotes: '',
+    completedCourses: [],
+    currentCourses: [],
+    plannedCourses: []
+  };
+}
+
+/**
+ * Test function for the advising agent API
+ * @param {string} message - Message to send to the advising agent
+ * @returns {Promise<string>} Response from the advising agent
+ */
+async function testAdvisingAgent(message: string): Promise<string> {
+  try {
+    const userId = getCurrentUserId();
+    
+    const response = await fetch(`${API_BASE_URL}/advising`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId: userId,
+        message: message
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.response;
+  } catch (error) {
+    console.error('Error testing advising agent:', error);
+    throw error;
+  }
+}
+
+export default Profile;

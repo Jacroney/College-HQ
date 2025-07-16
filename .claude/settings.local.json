@@ -11,7 +11,12 @@
       "Bash(rm:*)",
       "Bash(npm run dev:*)",
       "Bash(clear)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(chmod:*)",
+      "Bash(node:*)",
+      "Bash(aws:*)",
+      "Bash(./deploy.sh)",
+      "Bash(zip:*)"
     ],
     "deny": []
   }

@@ -1,0 +1,22 @@
+{
+  "name": "college-hq-profile-api",
+  "version": "1.0.0",
+  "description": "Profile API Lambda function for College HQ",
+  "main": "index.js",
+  "scripts": {
+    "test": "node index.js",
+    "deploy": "zip -r profile-api.zip . -x 'node_modules/*' && aws lambda update-function-code --function-name college-hq-profile-api --zip-file fileb://profile-api.zip"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1691.0",
+    "dotenv": "^16.0.3"
+  },
+  "keywords": [
+    "aws",
+    "lambda",
+    "dynamodb",
+    "profile"
+  ],
+  "author": "College HQ",
+  "license": "MIT"
+}

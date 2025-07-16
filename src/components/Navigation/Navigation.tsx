@@ -12,6 +12,9 @@ import {
   Avatar,
   Typography,
   Tooltip,
+  Divider,
+  Badge,
+  useTheme,
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -22,11 +25,104 @@ import {
   Timeline as TimelineIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
+  Psychology as PsychologyIcon,
+  Person as PersonIcon,
+  Notifications as NotificationsIcon,
 } from '@mui/icons-material';
+import { styled } from '@mui/material/styles';
+import { motion } from 'framer-motion';
 // TODO: Replace with AWS Cognito authentication
 
 const drawerWidth = 280;
 const collapsedDrawerWidth = 72;
+
+// Styled components
+const StyledDrawer = styled(Drawer)(({ theme }) => ({
+  '& .MuiDrawer-paper': {
+    background: 'linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)',
+    borderRight: `1px solid ${theme.palette.divider}`,
+    backdropFilter: 'blur(8px)',
+  },
+}));
+
+const NavigationHeader = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  padding: theme.spacing(2.5),
+  gap: theme.spacing(2),
+  borderBottom: `1px solid ${theme.palette.divider}`,
+  background: 'rgba(255, 255, 255, 0.6)',
+  backdropFilter: 'blur(8px)',
+  position: 'relative',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    background: 'linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.3), transparent)',
+  },
+}));
+
+const ProfileAvatar = styled(Avatar)(({ theme }) => ({
+  width: 44,
+  height: 44,
+  background: 'linear-gradient(135deg, #2563EB, #7C3AED)',
+  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+  border: `2px solid ${theme.palette.background.paper}`,
+  transition: 'all 0.3s ease',
+  '&:hover': {
+    transform: 'scale(1.05)',
+    boxShadow: '0 6px 16px rgba(37, 99, 235, 0.4)',
+  },
+}));
+
+const CompanyLogo = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.spacing(1),
+  marginBottom: theme.spacing(2),
+  padding: theme.spacing(1),
+}));
+
+const AnimatedListItem = styled(motion(ListItem))(({ theme }) => ({
+  borderRadius: theme.spacing(1.5),
+  margin: theme.spacing(0.5, 1),
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    background: 'rgba(37, 99, 235, 0.08)',
+  },
+}));
+
+const StyledListItemButton = styled(ListItemButton)(({ theme }) => ({
+  borderRadius: theme.spacing(1.5),
+  padding: theme.spacing(1.5, 2),
+  transition: 'all 0.3s ease',
+  '&.Mui-selected': {
+    background: 'linear-gradient(135deg, #2563EB, #7C3AED)',
+    color: theme.palette.primary.contrastText,
+    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+    '&:hover': {
+      background: 'linear-gradient(135deg, #1E40AF, #5B21B6)',
+      boxShadow: '0 6px 16px rgba(37, 99, 235, 0.4)',
+    },
+    '& .MuiListItemIcon-root': {
+      color: 'inherit',
+    },
+  },
+  '&:hover': {
+    background: 'rgba(37, 99, 235, 0.08)',
+    transform: 'translateX(4px)',
+  },
+}));
+
+const MainContent = styled(Box)(({ theme }) => ({
+  flexGrow: 1,
+  background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+  minHeight: '100vh',
+  transition: 'all 0.3s ease',
+}));
 
 const Navigation: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -63,99 +159,138 @@ const Navigation: React.FC = () => {
 
 
   const menuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-    { text: 'Schedule', icon: <CalendarIcon />, path: '/schedule' },
-    { text: 'Course Planner', icon: <TimelineIcon />, path: '/course-planner' },
-    { text: 'Study Tools', icon: <SchoolIcon />, path: '/study-tools' },
-    { text: 'Advising', icon: <SchoolIcon />, path: '/advising' },
+    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard', badge: null },
+    { text: 'Schedule', icon: <CalendarIcon />, path: '/schedule', badge: null },
+    { text: 'Course Planner', icon: <TimelineIcon />, path: '/course-planner', badge: null },
+    { text: 'Study Tools', icon: <SchoolIcon />, path: '/study-tools', badge: null },
+    { text: 'AI Advising', icon: <PsychologyIcon />, path: '/advising', badge: 'New' },
   ];
 
   const drawer = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: 2,
-          gap: 1,
-          borderBottom: '1px solid',
-          borderColor: 'divider',
-          justifyContent: isCollapsed ? 'center' : 'space-between',
-        }}
-      >
+      {/* Header with user info */}
+      <NavigationHeader sx={{ justifyContent: isCollapsed ? 'center' : 'space-between' }}>
         {!isCollapsed && (
           <>
-            <Avatar
-              src={user?.avatar}
-              alt={`${user?.firstName} ${user?.lastName}`}
-              sx={{ width: 40, height: 40 }}
-            />
+            <CompanyLogo>
+              <Box sx={{ 
+                width: 36, 
+                height: 36, 
+                borderRadius: 2,
+                background: 'linear-gradient(135deg, #2563EB, #7C3AED)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '1.2rem'
+              }}>
+                CH
+              </Box>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                College HQ
+              </Typography>
+            </CompanyLogo>
+          </>
+        )}
+        {isCollapsed && (
+          <Box sx={{ 
+            width: 32, 
+            height: 32, 
+            borderRadius: 2,
+            background: 'linear-gradient(135deg, #2563EB, #7C3AED)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            fontWeight: 'bold',
+            fontSize: '1rem'
+          }}>
+            CH
+          </Box>
+        )}
+      </NavigationHeader>
+
+      {/* User Profile Section */}
+      <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+          <ProfileAvatar
+            src={user?.avatar}
+            alt={`${user?.firstName} ${user?.lastName}`}
+            sx={{ width: isCollapsed ? 32 : 44, height: isCollapsed ? 32 : 44 }}
+          >
+            {!user?.avatar && <PersonIcon />}
+          </ProfileAvatar>
+          {!isCollapsed && (
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="subtitle1" noWrap>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, lineHeight: 1.2 }} noWrap>
                 {user?.firstName} {user?.lastName}
               </Typography>
               <Typography variant="body2" color="text.secondary" noWrap>
                 {user?.email}
               </Typography>
             </Box>
-            <Tooltip title="Settings">
-              <IconButton onClick={() => navigate('/profile')} size="small">
-                <SettingsIcon />
-              </IconButton>
-            </Tooltip>
-          </>
-        )}
-        {isCollapsed && (
-          <Avatar
-            src={user?.avatar}
-            alt={`${user?.firstName} ${user?.lastName}`}
-            sx={{ width: 32, height: 32 }}
-          />
-        )}
+          )}
+          {!isCollapsed && (
+            <Box sx={{ display: 'flex', gap: 0.5 }}>
+              <Tooltip title="Notifications">
+                <IconButton size="small" sx={{ '&:hover': { background: 'rgba(37, 99, 235, 0.08)' } }}>
+                  <Badge badgeContent={3} color="error" variant="dot">
+                    <NotificationsIcon fontSize="small" />
+                  </Badge>
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Profile Settings">
+                <IconButton 
+                  onClick={() => navigate('/profile')} 
+                  size="small"
+                  sx={{ '&:hover': { background: 'rgba(37, 99, 235, 0.08)' } }}
+                >
+                  <SettingsIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          )}
+        </Box>
+        
+        {/* Collapse Button */}
+        <Box sx={{ display: 'flex', justifyContent: isCollapsed ? 'center' : 'flex-end' }}>
+          <Tooltip title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+            <IconButton 
+              onClick={handleCollapse} 
+              size="small"
+              sx={{ 
+                background: 'rgba(37, 99, 235, 0.08)',
+                '&:hover': { background: 'rgba(37, 99, 235, 0.12)' }
+              }}
+            >
+              {isCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+            </IconButton>
+          </Tooltip>
+        </Box>
       </Box>
       
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: isCollapsed ? 'center' : 'flex-end',
-          p: 1,
-          borderBottom: '1px solid',
-          borderColor: 'divider',
-        }}
-      >
-        <Tooltip title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
-          <IconButton onClick={handleCollapse} size="small">
-            {isCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
-          </IconButton>
-        </Tooltip>
-      </Box>
-      
+      {/* Navigation Menu */}
       <List sx={{ flex: 1, px: 1, py: 2 }}>
-        {menuItems.map((item) => (
-          <ListItem key={item.text} disablePadding>
+        {menuItems.map((item, index) => (
+          <AnimatedListItem 
+            key={item.text} 
+            disablePadding
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: index * 0.1 }}
+          >
             <Tooltip 
               title={isCollapsed ? item.text : ''} 
               placement="right"
               disableHoverListener={!isCollapsed}
             >
-              <ListItemButton
+              <StyledListItemButton
                 selected={location.pathname === item.path}
                 onClick={() => navigate(item.path)}
                 sx={{
-                  borderRadius: 2,
-                  mb: 0.5,
                   justifyContent: isCollapsed ? 'center' : 'flex-start',
                   px: isCollapsed ? 1 : 2,
-                  '&.Mui-selected': {
-                    backgroundColor: 'primary.main',
-                    color: 'primary.contrastText',
-                    '&:hover': {
-                      backgroundColor: 'primary.dark',
-                    },
-                    '& .MuiListItemIcon-root': {
-                      color: 'inherit',
-                    },
-                  },
                 }}
               >
                 <ListItemIcon sx={{ 
@@ -168,16 +303,38 @@ const Navigation: React.FC = () => {
                   <ListItemText 
                     primary={item.text}
                     primaryTypographyProps={{
-                      fontWeight: location.pathname === item.path ? 600 : 400,
+                      fontWeight: location.pathname === item.path ? 600 : 500,
+                      fontSize: '0.95rem',
                     }}
                   />
                 )}
-              </ListItemButton>
+                {!isCollapsed && item.badge && (
+                  <Badge 
+                    badgeContent={item.badge} 
+                    color="secondary" 
+                    sx={{
+                      '& .MuiBadge-badge': {
+                        fontSize: '0.7rem',
+                        height: 18,
+                        minWidth: 18,
+                      }
+                    }}
+                  />
+                )}
+              </StyledListItemButton>
             </Tooltip>
-          </ListItem>
+          </AnimatedListItem>
         ))}
       </List>
 
+      {/* Footer */}
+      {!isCollapsed && (
+        <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center' }}>
+            College HQ v1.0.0
+          </Typography>
+        </Box>
+      )}
     </Box>
   );
 
@@ -204,7 +361,7 @@ const Navigation: React.FC = () => {
         <MenuIcon />
       </IconButton>
       
-      <Drawer
+      <StyledDrawer
         variant="temporary"
         open={mobileOpen}
         onClose={handleDrawerToggle}
@@ -216,23 +373,19 @@ const Navigation: React.FC = () => {
           '& .MuiDrawer-paper': { 
             boxSizing: 'border-box', 
             width: drawerWidth,
-            borderRight: '1px solid',
-            borderColor: 'divider',
           },
         }}
       >
         {drawer}
-      </Drawer>
+      </StyledDrawer>
       
-      <Drawer
+      <StyledDrawer
         variant="permanent"
         sx={{
           display: { xs: 'none', sm: 'block' },
           '& .MuiDrawer-paper': { 
             boxSizing: 'border-box', 
             width: isCollapsed ? collapsedDrawerWidth : drawerWidth,
-            borderRight: '1px solid',
-            borderColor: 'divider',
             transition: 'width 0.3s ease-in-out',
             overflowX: 'hidden',
           },
@@ -240,24 +393,21 @@ const Navigation: React.FC = () => {
         open
       >
         {drawer}
-      </Drawer>
+      </StyledDrawer>
       
-      <Box
+      <MainContent
         component="main"
         sx={{
-          flexGrow: 1,
           p: { xs: 2, sm: 3 },
           width: { 
             sm: `calc(100% - ${isCollapsed ? collapsedDrawerWidth : drawerWidth}px)` 
           },
-          backgroundColor: 'background.default',
-          transition: 'width 0.3s ease-in-out',
         }}
       >
-        <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+        <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
           <Outlet />
         </Box>
-      </Box>
+      </MainContent>
     </Box>
   );
 };
