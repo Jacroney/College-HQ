@@ -16,7 +16,6 @@ import { styled } from '@mui/material/styles';
 import {
   Send as SendIcon,
   Psychology as AdvisingIcon,
-  Person as PersonIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -343,7 +342,7 @@ const Advising: React.FC = () => {
             maxRows={4}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyPress}
             placeholder="Ask about courses, requirements, or academic planning..."
             disabled={loading}
             variant="outlined"

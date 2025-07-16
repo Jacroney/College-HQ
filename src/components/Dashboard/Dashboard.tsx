@@ -1,4 +1,4 @@
-import { Box, Grid, Paper, Typography, IconButton, Tooltip, Skeleton, Alert } from '@mui/material';
+import { Box, Grid, Paper, Typography, IconButton, Tooltip, Skeleton, Alert, Avatar, Button } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -9,6 +9,7 @@ import {
   Work as WorkIcon,
   FitnessCenter as FitnessIcon,
   Refresh as RefreshIcon,
+  Person as PersonIcon,
 } from '@mui/icons-material';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -86,6 +87,23 @@ const StatValue = styled(Typography)(({ theme }) => ({
 const StatLabel = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.secondary,
   fontSize: '0.875rem',
+}));
+
+const ProfileWidget = styled(motion(Paper))(({ theme }) => ({
+  padding: theme.spacing(3),
+  height: '100%',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: theme.palette.surface.paper,
+  border: `1px solid ${theme.palette.divider}`,
+  transition: 'all 0.2s ease-in-out',
+  '&:hover': {
+    transform: 'translateY(-4px)',
+    boxShadow: theme.shadows[4],
+    cursor: 'pointer',
+  },
 }));
 
 
@@ -306,8 +324,33 @@ const Dashboard = () => {
 
       <AnimatePresence>
         <WidgetGrid container spacing={3}>
+          {/* Profile Widget as first card */}
+          <Grid item xs={12} sm={6} md={4} key="profile-widget">
+            <ProfileWidget
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              onClick={() => navigate('/profile')}
+              whileHover={{ scale: 1.03 }}
+            >
+              <Avatar sx={{ width: 64, height: 64, mb: 2, bgcolor: 'primary.main' }}>
+                <PersonIcon fontSize="large" />
+              </Avatar>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                Student Profile
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2, textAlign: 'center' }}>
+                View and edit your personal and academic information
+              </Typography>
+              <Button variant="contained" color="primary" size="small" sx={{ mt: 1 }}>
+                Go to Profile
+              </Button>
+            </ProfileWidget>
+          </Grid>
+          {/* Render the rest of the widgets */}
           {loading
-            ? Array.from(new Array(6)).map((_, index) => (
+            ? Array.from(new Array(5)).map((_, index) => (
                 <Grid item xs={12} sm={6} md={4} key={index}>
                   <Widget>
                     <Skeleton variant="rectangular" height={200} />
