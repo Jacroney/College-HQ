@@ -1,0 +1,29 @@
+{
+  "name": "college-hq-auth",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "AWS Cognito authentication service for College HQ",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node app.js",
+    "lint": "eslint .",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "node-fetch": "^3.3.2",
+    "helmet": "^7.1.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express-rate-limit": "^7.2.0",
+    "connect-session-sequelize": "^7.1.7"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

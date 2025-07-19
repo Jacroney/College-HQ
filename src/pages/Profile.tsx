@@ -273,106 +273,72 @@ async function loadUniversities(): Promise<University[]> {
   ];
 }
 
-async function loadCoursesForUniversity(universityName: string): Promise<Course[]> {
+async function loadCoursesForUniversity(universityName: string, major?: string): Promise<Course[]> {
   try {
-    console.log('Loading courses for university:', universityName);
+    console.log('Loading courses for university:', universityName, 'major:', major);
     
-    // This will eventually call your course catalog API
-    // For now, return the sample courses to test the system
-    const sampleCourses: Course[] = [
-      {
-        university_course_id: "calpoly_csc101",
-        course_code: "CSC 101",
-        course_name: "Fundamentals of Computer Science",
-        units: 4,
-        description: "Basic principles of algorithmic problem solving and programming using Python. Covers variables, data types, control structures, functions, and basic data structures.",
-        prerequisites: [],
-        difficulty_level: "Introductory",
-        required_for_majors: ["Computer Science"]
+    // If no major is selected yet, return empty array
+    if (!major) {
+      console.log('No major selected, returning empty course list');
+      return [];
+    }
+    
+    const userId = getCurrentUserId();
+    
+    // Call your enhanced profile Lambda with course lookup action
+    const response = await fetch(`${API_BASE_URL}/profile/${userId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      {
-        university_course_id: "calpoly_csc202",
-        course_code: "CSC 202",
-        course_name: "Data Structures",
-        units: 4,
-        description: "Implementation and analysis of fundamental data structures including arrays, linked lists, stacks, queues, trees, and hash tables.",
-        prerequisites: ["CSC 101"],
-        difficulty_level: "Intermediate",
-        required_for_majors: ["Computer Science"]
-      },
-      {
-        university_course_id: "calpoly_csc203",
-        course_code: "CSC 203",
-        course_name: "Project-Based Object-Oriented Programming",
-        units: 4,
-        description: "Advanced programming using object-oriented techniques. Large-scale software development and design patterns using Java.",
-        prerequisites: ["CSC 202"],
-        difficulty_level: "Intermediate",
-        required_for_majors: ["Computer Science"]
-      },
-      {
-        university_course_id: "calpoly_csc225",
-        course_code: "CSC 225",
-        course_name: "Computer Organization",
-        units: 4,
-        description: "Introduction to computer organization and assembly language programming. Number systems and basic computer architecture.",
-        prerequisites: ["CSC 202"],
-        difficulty_level: "Intermediate",
-        required_for_majors: ["Computer Science"]
-      },
-      {
-        university_course_id: "calpoly_csc348",
-        course_code: "CSC 348",
-        course_name: "Discrete Structures",
-        units: 4,
-        description: "Discrete mathematical structures and their applications to computer science including logic, sets, functions, and graph theory.",
-        prerequisites: ["CSC 202", "MATH 141"],
-        difficulty_level: "Intermediate",
-        required_for_majors: ["Computer Science"]
-      },
-      {
-        university_course_id: "calpoly_math141",
-        course_code: "MATH 141",
-        course_name: "Calculus I",
-        units: 4,
-        description: "Limits, derivatives, applications of derivatives, introduction to integration. Designed for students in mathematics, science, and engineering.",
-        prerequisites: [],
-        difficulty_level: "Intermediate",
-        required_for_majors: ["Computer Science", "Engineering", "Mathematics"]
-      },
-      {
-        university_course_id: "calpoly_math142",
-        course_code: "MATH 142",
-        course_name: "Calculus II",
-        units: 4,
-        description: "Techniques of integration, applications of integration, infinite sequences and series.",
-        prerequisites: ["MATH 141"],
-        difficulty_level: "Intermediate",
-        required_for_majors: ["Computer Science", "Engineering", "Mathematics"]
-      },
-      {
-        university_course_id: "calpoly_math143",
-        course_code: "MATH 143",
-        course_name: "Calculus III",
-        units: 4,
-        description: "Infinite sequences and series, vector algebra, parametric curves.",
-        prerequisites: ["MATH 142"],
-        difficulty_level: "Intermediate",
-        required_for_majors: ["Computer Science", "Engineering", "Mathematics"]
-      }
-    ];
+      body: JSON.stringify({
+        action: 'getCourses',
+        university: universityName,
+        major: major
+      }),
+    });
 
-    // Filter courses for the specific university
-    if (universityName === "Cal Poly San Luis Obispo") {
-      return sampleCourses;
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Failed to load courses:', errorData);
+      
+      // If it's a 404, the major isn't available yet
+      if (response.status === 404) {
+        console.log('Degree requirements not found for this major');
+        return [];
+      }
+      
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Courses loaded successfully:', data);
+    
+    if (data.success && data.courses) {
+      // Convert the API response format to your Course interface
+      return data.courses.map((course: any) => ({
+        university_course_id: `${universityName.toLowerCase().replace(/\s+/g, '')}_${course.id.toLowerCase().replace(/\s+/g, '')}`,
+        course_code: course.id,
+        course_name: course.name,
+        units: course.units,
+        description: `${course.name} - ${course.units} units`, // You could enhance this with better descriptions
+        prerequisites: [], // Could be enhanced to parse prerequisites
+        difficulty_level: course.type === 'major' ? 'Intermediate' : 'Introductory',
+        required_for_majors: [major] // This course is required for the selected major
+      }));
     }
     
     return [];
+    
   } catch (error) {
     console.error('Error loading courses:', error);
+    
+    // Return empty array on error rather than sample data
     return [];
   }
 }
+
+// Also update the loadUniversityData function to pass the major:
 
 async function loadMajorsForUniversity(universityName: string): Promise<string[]> {
   if (universityName === "Cal Poly San Luis Obispo") {
@@ -432,7 +398,7 @@ const Profile: React.FC = () => {
         setProfile(profileData);
         
         if (profileData.university) {
-          await loadUniversityData(profileData.university.name);
+          await loadUniversityData(profileData.university.name, profileData.major);
         }
       } catch (err) {
         setError('Failed to load profile data');
@@ -445,15 +411,18 @@ const Profile: React.FC = () => {
   }, []);
 
   // Load university-specific data when university changes
-  const loadUniversityData = async (universityName: string) => {
+  const loadUniversityData = async (universityName: string, major?: string) => {
     try {
-      const [majorsData, coursesData] = await Promise.all([
-        loadMajorsForUniversity(universityName),
-        loadCoursesForUniversity(universityName)
-      ]);
-      
+      const majorsData = await loadMajorsForUniversity(universityName);
       setAvailableMajors(majorsData);
-      setAvailableCourses(coursesData);
+      
+      // Only load courses if we have a major
+      if (major) {
+        const coursesData = await loadCoursesForUniversity(universityName, major);
+        setAvailableCourses(coursesData);
+      } else {
+        setAvailableCourses([]);
+      }
     } catch (err) {
       console.error('Error loading university data:', err);
     }
@@ -497,11 +466,17 @@ const Profile: React.FC = () => {
       // Handle cascading changes
       if (key === 'university' && value) {
         const uni = value as University;
-        loadUniversityData(uni.name);
+        loadUniversityData(uni.name); // Don't pass major yet
         updated.major = '';
         updated.concentration = '';
-      } else if (key === 'major' && value) {
-        loadConcentrationData(value as string);
+        setAvailableCourses([]); // Clear courses when university changes
+      } else if (key === 'major' && value && prev.university) {
+        const major = value as string;
+        loadConcentrationData(major);
+        // Load courses for the new major
+        loadCoursesForUniversity(prev.university.name, major).then(courses => {
+          setAvailableCourses(courses);
+        });
         updated.concentration = '';
       }
       

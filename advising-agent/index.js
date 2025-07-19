@@ -16,6 +16,9 @@ const bedrock = new BedrockRuntimeClient({ region: process.env.AWS_REGION || 'us
 // DynamoDB table names
 const USERS_TABLE = process.env.USERS_TABLE || 'college-hq-users';
 const CONVERSATIONS_TABLE = process.env.CONVERSATIONS_TABLE || 'college-hq-conversations';
+const COURSE_CATALOG_TABLE = process.env.COURSE_CATALOG_TABLE || 'college-hq-course-catalog';
+const DEGREE_REQUIREMENTS_TABLE = process.env.DEGREE_REQUIREMENTS_TABLE || 'college-hq-degree-requirements';
+const COURSE_FLOWCHART_TABLE = process.env.COURSE_FLOWCHART_TABLE || 'college-hq-course-flowchart';
 
 // ====================================
 // MAIN LAMBDA HANDLER
@@ -72,17 +75,29 @@ async function handleProfileRequest(event) {
 }
 
 // ====================================
-// ADVISING REQUEST HANDLER
+// ENHANCED ADVISING REQUEST HANDLER
 // ====================================
 
 /**
- * Handle advising-related requests using AI agent
+ * Handle advising-related requests using enhanced AI agent with Cal Poly data
  * @param {Object} event - Lambda event object
  * @returns {Object} HTTP response object
  */
 async function handleAdvisingRequest(event) {
   // Parse request body
-  let body = event.body ? JSON.parse(event.body) : event;
+  let body;
+  try {
+    if (event.body) {
+      body = JSON.parse(event.body);
+    } else if (event.userId || event.message) {
+      body = event;
+    } else {
+      throw new Error('Invalid event format');
+    }
+  } catch (e) {
+    return createResponse(400, { error: 'Invalid JSON in request body' });
+  }
+
   const { userId, message, conversationId } = body;
   
   // Validate required parameters
@@ -90,18 +105,25 @@ async function handleAdvisingRequest(event) {
     return createResponse(400, { error: 'Missing userId or message' });
   }
 
-  // Get user profile for context
-  const userProfile = await getUserProfile(userId);
-  if (!userProfile) {
-    return createResponse(404, { error: 'User not found' });
+  // Get complete student profile
+  const studentProfile = await getUserProfile(userId);
+  if (!studentProfile) {
+    return createResponse(404, { error: 'Student profile not found. Please complete your profile first.' });
   }
+
+  // Get relevant course catalog data with Cal Poly integration
+  const { courses: courseCatalogData, degreeRequirements } = await getRelevantCourses(
+    studentProfile.university?.name || studentProfile.university, 
+    message, 
+    studentProfile
+  );
 
   // Get or create conversation thread
   const currentConversationId = conversationId || generateConversationId();
   const conversationHistory = await getConversationHistory(userId, currentConversationId);
 
-  // Build AI prompt with user context
-  const systemPrompt = buildAdvisingSystemPrompt(userProfile);
+  // Build enhanced AI prompt with user context and Cal Poly course data
+  const systemPrompt = buildEnhancedAdvisingSystemPrompt(studentProfile, courseCatalogData, degreeRequirements);
   const messages = buildMessageHistory(conversationHistory, message);
 
   // Generate AI response using Bedrock
@@ -110,13 +132,296 @@ async function handleAdvisingRequest(event) {
   // Store conversation for future context
   await storeConversation(userId, currentConversationId, message, response.text);
 
-  // Return formatted response
+  // Return enhanced response with metadata
   return createResponse(200, {
     agent: 'advising',
     userId,
     conversationId: currentConversationId,
     response: response.text,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    profileUsed: true,
+    coursesReferenced: courseCatalogData.length,
+    degreeRequirementsUsed: !!degreeRequirements,
+    studentMajor: studentProfile.major,
+    studentYear: studentProfile.academicYear,
+    university: studentProfile.university?.name || studentProfile.university
+  });
+}
+
+// ====================================
+// ENHANCED COURSE DATA FUNCTIONS
+// ====================================
+
+/**
+ * Get relevant course data using multiple strategies with Cal Poly integration
+ * @param {string} university - University name
+ * @param {string} userMessage - User's message
+ * @param {Object} studentProfile - Student profile data
+ * @returns {Object} Object with courses array and degree requirements
+ */
+async function getRelevantCourses(university, userMessage, studentProfile) {
+  try {
+    console.log(`Getting courses for university: ${university}`);
+    
+    const courses = [];
+    
+    // Get degree requirements if available
+    let degreeRequirements = null;
+    if (studentProfile.major) {
+      const universityKey = getUniversityKey(university);
+      const majorId = `${universityKey}_${studentProfile.major.toLowerCase().replace(/\s+/g, '')}`;
+      degreeRequirements = await getDegreeRequirements(majorId);
+    }
+    
+    // Strategy 1: Get courses mentioned in user message
+    const mentionedCourses = extractCourseCodesFromMessage(userMessage);
+    for (const courseCode of mentionedCourses) {
+      const universityKey = getUniversityKey(university);
+      const courseId = `${universityKey}_${courseCode.toLowerCase().replace(/\s+/g, '')}`;
+      try {
+        const courseData = await getCourseById(courseId);
+        if (courseData) {
+          courses.push(courseData);
+        }
+      } catch (error) {
+        console.error(`Error getting mentioned course ${courseId}:`, error);
+      }
+    }
+    
+    // Strategy 2: Get courses from degree requirements
+    if (degreeRequirements && degreeRequirements.requirements) {
+      const reqCourses = await getCoursesFromDegreeRequirements(degreeRequirements, studentProfile, university);
+      courses.push(...reqCourses);
+    }
+    
+    // Strategy 3: Get flowchart courses for their current year
+    if (studentProfile.academicYear) {
+      const flowchartCourses = await getFlowchartCourses(university, studentProfile.major, studentProfile.academicYear);
+      courses.push(...flowchartCourses);
+    }
+    
+    // Strategy 4: Fallback to major-based search
+    if (courses.length < 5 && studentProfile.major) {
+      const majorCourses = await getCoursesByMajor(university, studentProfile.major);
+      courses.push(...majorCourses);
+    }
+    
+    // Remove duplicates and limit
+    const uniqueCourses = removeDuplicateCourses(courses);
+    const limitedCourses = uniqueCourses.slice(0, 15);
+    
+    console.log(`Found ${limitedCourses.length} relevant courses`);
+    return { courses: limitedCourses, degreeRequirements };
+  } catch (error) {
+    console.error('Error getting relevant courses:', error);
+    return { courses: [], degreeRequirements: null };
+  }
+}
+
+/**
+ * Get degree requirements from DynamoDB
+ * @param {string} majorId - Major identifier
+ * @returns {Object|null} Degree requirements or null
+ */
+async function getDegreeRequirements(majorId) {
+  try {
+    const params = {
+      TableName: DEGREE_REQUIREMENTS_TABLE,
+      Key: { university_major_id: majorId }
+    };
+    const result = await dynamodb.get(params).promise();
+    return result.Item;
+  } catch (error) {
+    console.error(`Error getting degree requirements for ${majorId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Get courses from degree requirements
+ * @param {Object} degreeRequirements - Degree requirements object
+ * @param {Object} studentProfile - Student profile
+ * @param {string} university - University name
+ * @returns {Array} Array of course objects
+ */
+async function getCoursesFromDegreeRequirements(degreeRequirements, studentProfile, university) {
+  const courses = [];
+  
+  try {
+    // Look through major courses in requirements
+    if (degreeRequirements.requirements && degreeRequirements.requirements.major_courses) {
+      const majorCourses = degreeRequirements.requirements.major_courses.courses || [];
+      
+      for (const reqCourse of majorCourses.slice(0, 8)) { // Limit to first 8
+        const universityKey = getUniversityKey(university);
+        const courseId = `${universityKey}_${reqCourse.course_id.toLowerCase().replace(/\s+/g, '')}`;
+        try {
+          const courseData = await getCourseById(courseId);
+          if (courseData) {
+            courses.push(courseData);
+          }
+        } catch (error) {
+          console.error(`Error getting requirement course ${courseId}:`, error);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error processing degree requirements:', error);
+  }
+  
+  return courses;
+}
+
+/**
+ * Get flowchart courses for student's year
+ * @param {string} university - University name
+ * @param {string} major - Student's major
+ * @param {string} academicYear - Student's academic year
+ * @returns {Array} Array of course objects
+ */
+async function getFlowchartCourses(university, major, academicYear) {
+  const courses = [];
+  
+  try {
+    const universityKey = getUniversityKey(university);
+    const flowchartId = `${universityKey}_${major.toLowerCase().replace(/\s+/g, '')}_2024_2025`;
+    
+    const params = {
+      TableName: COURSE_FLOWCHART_TABLE,
+      Key: { university_major_year: flowchartId }
+    };
+    const result = await dynamodb.get(params).promise();
+    
+    if (result.Item && result.Item.flowchart) {
+      // Map academic year to flowchart year
+      const yearMap = {
+        'Freshman': 'year_1',
+        'Sophomore': 'year_2', 
+        'Junior': 'year_3',
+        'Senior': 'year_4'
+      };
+      
+      const flowchartYear = yearMap[academicYear];
+      if (flowchartYear && result.Item.flowchart[flowchartYear]) {
+        const yearData = result.Item.flowchart[flowchartYear];
+        
+        // Get courses from all quarters of that year
+        for (const quarter of ['fall', 'winter', 'spring']) {
+          if (yearData[quarter] && yearData[quarter].courses) {
+            for (const course of yearData[quarter].courses.slice(0, 4)) { // Limit per quarter
+              const universityKey = getUniversityKey(university);
+              const courseId = `${universityKey}_${course.course_id.toLowerCase().replace(/\s+/g, '')}`;
+              try {
+                const courseData = await getCourseById(courseId);
+                if (courseData) {
+                  courses.push(courseData);
+                }
+              } catch (error) {
+                console.error(`Error getting flowchart course ${courseId}:`, error);
+              }
+            }
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error getting flowchart courses:', error);
+  }
+  
+  return courses;
+}
+
+/**
+ * Get course by ID from catalog
+ * @param {string} courseId - Course identifier
+ * @returns {Object|null} Course object or null
+ */
+async function getCourseById(courseId) {
+  try {
+    const params = {
+      TableName: COURSE_CATALOG_TABLE,
+      Key: { university_course_id: courseId }
+    };
+    const result = await dynamodb.get(params).promise();
+    return result.Item;
+  } catch (error) {
+    console.error(`Error getting course ${courseId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Get courses by major using scan
+ * @param {string} university - University name
+ * @param {string} major - Student's major
+ * @returns {Array} Array of course objects
+ */
+async function getCoursesByMajor(university, major) {
+  try {
+    const params = {
+      TableName: COURSE_CATALOG_TABLE,
+      FilterExpression: 'university = :university AND contains(required_for_majors, :major)',
+      ExpressionAttributeValues: {
+        ':university': university,
+        ':major': major
+      }
+    };
+    
+    const result = await dynamodb.scan(params).promise();
+    return result.Items || [];
+  } catch (error) {
+    console.error(`Error getting courses for major ${major}:`, error);
+    return [];
+  }
+}
+
+// ====================================
+// HELPER FUNCTIONS
+// ====================================
+
+/**
+ * Get university key for database lookups
+ * @param {string} university - University name
+ * @returns {string} University key
+ */
+function getUniversityKey(university) {
+  if (typeof university === 'object' && university.name) {
+    university = university.name;
+  }
+  
+  const universityLower = university.toLowerCase();
+  if (universityLower.includes('cal poly') || universityLower.includes('california polytechnic')) {
+    return 'calpoly';
+  }
+  
+  // Default to generic key based on university name
+  return university.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
+}
+
+/**
+ * Extract course codes mentioned in user message
+ * @param {string} message - User's message
+ * @returns {Array} Array of course codes
+ */
+function extractCourseCodesFromMessage(message) {
+  const coursePattern = /([A-Z]{2,4})\s*(\d{3})/gi;
+  const matches = message.match(coursePattern) || [];
+  return matches.map(match => match.replace(/\s+/g, ''));
+}
+
+/**
+ * Remove duplicate courses from array
+ * @param {Array} courses - Array of course objects
+ * @returns {Array} Array with duplicates removed
+ */
+function removeDuplicateCourses(courses) {
+  const seen = new Set();
+  return courses.filter(course => {
+    if (seen.has(course.university_course_id)) {
+      return false;
+    }
+    seen.add(course.university_course_id);
+    return true;
   });
 }
 
@@ -234,14 +539,11 @@ function createDefaultProfile(userId) {
   };
 }
 
-// ====================================
-// HELPER FUNCTIONS
-// ====================================
-
 /**
  * Get user profile data for AI context
+ * Creates default profile if user doesn't exist
  * @param {string} userId - User identifier
- * @returns {Object|null} User profile or null if not found
+ * @returns {Object|null} User profile or null if error
  */
 async function getUserProfile(userId) {
   try {
@@ -250,6 +552,15 @@ async function getUserProfile(userId) {
       Key: { user_id: userId }
     };
     const result = await dynamodb.get(params).promise();
+    
+    // Create default profile if user doesn't exist
+    if (!result.Item) {
+      console.log(`No profile found for user: ${userId}, creating default profile`);
+      const defaultProfile = createDefaultProfile(userId);
+      await saveProfile(userId, defaultProfile);
+      return defaultProfile;
+    }
+    
     return result.Item;
   } catch (error) {
     console.error('Error getting user profile:', error);
@@ -325,36 +636,112 @@ async function storeConversation(userId, conversationId, userMessage, assistantR
 }
 
 /**
- * Build system prompt for AI advisor with user context
+ * Build enhanced system prompt for AI advisor with Cal Poly course data
  * @param {Object} userProfile - User profile data
+ * @param {Array} courses - Array of relevant courses
+ * @param {Object} degreeRequirements - Degree requirements object
  * @returns {string} System prompt for AI
  */
-function buildAdvisingSystemPrompt(userProfile) {
-  return `You are an expert academic advisor for college students. You provide personalized course recommendations and academic guidance.
+function buildEnhancedAdvisingSystemPrompt(userProfile, courses, degreeRequirements) {
+  // Extract basic profile info
+  const studentName = userProfile.firstName || userProfile.first_name || null;
+  const major = userProfile.major || null;
+  const academicYear = userProfile.academicYear || userProfile.academic_year || null;
+  const university = userProfile.university?.name || userProfile.university || null;
+  const completedCourses = userProfile.completedCourses || userProfile.completed_courses || [];
+  const gpa = userProfile.gpa || userProfile.currentGPA || null;
+  
+  // Build student info section
+  let studentInfo = 'STUDENT INFORMATION:\n';
+  if (studentName) studentInfo += `- Name: ${studentName}\n`;
+  if (university) studentInfo += `- University: ${university}\n`;
+  if (major) studentInfo += `- Major: ${major}\n`;
+  if (academicYear) studentInfo += `- Academic Level: ${academicYear}\n`;
+  if (gpa) studentInfo += `- Current GPA: ${gpa}\n`;
+  if (completedCourses.length > 0) {
+    studentInfo += `- Completed Courses: ${completedCourses.join(', ')}\n`;
+  }
+  
+  // Build degree requirements section
+  let requirementsInfo = '';
+  if (degreeRequirements) {
+    requirementsInfo = `\nDEGREE REQUIREMENTS FOR ${major}:\n`;
+    requirementsInfo += `- Total Units Required: ${degreeRequirements.total_units || 'Not specified'}\n`;
+    
+    if (degreeRequirements.requirements) {
+      if (degreeRequirements.requirements.major_courses) {
+        requirementsInfo += `- Major Courses: ${degreeRequirements.requirements.major_courses.total_units || '?'} units\n`;
+      }
+      if (degreeRequirements.requirements.support_courses) {
+        requirementsInfo += `- Support Courses: ${degreeRequirements.requirements.support_courses.total_units || '?'} units\n`;
+      }
+      if (degreeRequirements.requirements.general_education) {
+        requirementsInfo += `- General Education: ${degreeRequirements.requirements.general_education.total_units || '?'} units\n`;
+      }
+    }
+  }
+  
+  // Build course catalog section
+  let courseInfo = '';
+  if (courses && courses.length > 0) {
+    courseInfo = `\nRELEVANT COURSES:\n`;
+    
+    courses.forEach(course => {
+      courseInfo += `\n${course.course_code} - ${course.course_name}\n`;
+      courseInfo += `  Description: ${course.description}\n`;
+      courseInfo += `  Units: ${course.units}\n`;
+      courseInfo += `  Difficulty: ${course.difficulty_level}\n`;
+      
+      // Handle prerequisites
+      if (course.prerequisites && course.prerequisites.length > 0) {
+        const prereqs = Array.isArray(course.prerequisites) 
+          ? course.prerequisites 
+          : [course.prerequisites];
+        courseInfo += `  Prerequisites: ${prereqs.join(', ')}\n`;
+      }
+      
+      // Handle quarters offered
+      if (course.typical_quarters && course.typical_quarters.length > 0) {
+        const quarters = Array.isArray(course.typical_quarters) 
+          ? course.typical_quarters 
+          : [course.typical_quarters];
+        courseInfo += `  Offered: ${quarters.join(', ')}\n`;
+      }
+      
+      // Show which majors require this course
+      if (course.required_for_majors && course.required_for_majors.length > 0) {
+        const majors = Array.isArray(course.required_for_majors) 
+          ? course.required_for_majors 
+          : [course.required_for_majors];
+        courseInfo += `  Required for: ${majors.join(', ')}\n`;
+      }
+    });
+  }
+  
+  return `You are an expert academic advisor at ${university || 'the university'} helping ${studentName || 'this student'} with course planning and degree requirements.
 
-Student Profile:
-- Name: ${userProfile.email}
-- University: ${userProfile.university}
-- Major: ${userProfile.major}
-- Concentration: ${userProfile.concentration || 'Not specified'}
-- Year: ${userProfile.year}
+${studentInfo}${requirementsInfo}${courseInfo}
 
-Your Role:
-- Provide specific, actionable course recommendations
-- Consider prerequisite requirements and course sequences
-- Help with degree planning and graduation timelines
-- Suggest extracurricular activities and opportunities
-- Be encouraging and supportive
+ENHANCED ADVISOR GUIDELINES:
+- Use the specific degree requirements and course information above
+- Always check prerequisites before suggesting courses
+- Reference specific course codes, units, and descriptions
+- Consider the student's academic level and completed courses
+- Help with degree planning and graduation requirements
+- Explain course sequences and prerequisite chains
+- Suggest appropriate course loads per quarter/semester
+- Consider course difficulty and student's current GPA
+- Help track progress toward degree completion
 
-Guidelines:
-- Always consider the student's specific major and year
-- Ask clarifying questions when needed
-- Provide reasoning for your recommendations
-- Mention prerequisites and course difficulty when relevant
-- Keep responses concise but comprehensive
-- If you need specific course catalog information, acknowledge this limitation
+SMART RECOMMENDATIONS:
+- Check degree requirements against completed courses
+- Suggest missing prerequisites first
+- Balance course difficulty in quarter planning
+- Consider course availability by quarter
+- Help plan optimal graduation timeline
+- Flag any degree requirement gaps
 
-Respond in a friendly, professional tone as an academic advisor would.`;
+Be specific, reference actual course data, and always explain your reasoning.`;
 }
 
 /**
@@ -460,22 +847,20 @@ if (require.main === module) {
   (async () => {
     // Mock user profile for testing
     const mockUserProfile = {
-      user_id: 'test-user',
-      email: 'test@university.edu',
-      university: 'State University',
+      user_id: 'user_ufkkwtqhrzg',
+      firstName: 'Joseph',
+      lastName: 'Croney',
+      email: 'jacroney@icloud.com',
+      university: 'Cal Poly San Luis Obispo',
       major: 'Computer Science',
-      concentration: 'Software Engineering',
-      year: 'Junior'
+      academicYear: 'Freshman',
+      completedCourses: ['CSC 101', 'CSC 203']
     };
-
-    // Mock getUserProfile function for testing
-    const originalGetUserProfile = getUserProfile;
-    getUserProfile = async (userId) => mockUserProfile;
 
     // Test event
     const event = {
-      userId: 'test-user',
-      message: 'What classes should I take next semester for my CS major?'
+      userId: 'user_ufkkwtqhrzg',
+      message: 'What courses should I take next quarter for my CS major?'
     };
 
     // Run test
