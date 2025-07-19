@@ -16,7 +16,8 @@
       "Bash(node:*)",
       "Bash(aws:*)",
       "Bash(./deploy.sh)",
-      "Bash(zip:*)"
+      "Bash(zip:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": []
   }

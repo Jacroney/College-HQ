@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useProfileContext } from '../context/ProfileContext';
 import {
   Box,
   Paper,
@@ -370,8 +371,9 @@ async function loadConcentrationsForMajor(major: string): Promise<string[]> {
 
 // --- Main Component ---
 const Profile: React.FC = () => {
-  // Existing state
-  const [profile, setProfile] = useState<StudentProfile | null>(null);
+  const { state: profileState, updateProfile, dispatch } = useProfileContext();
+  
+  // Local state for form
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -395,7 +397,7 @@ const Profile: React.FC = () => {
         ]);
         
         setUniversities(universitiesData);
-        setProfile(profileData);
+        dispatch({ type: 'SET_PROFILE', payload: profileData });
         
         if (profileData.university) {
           await loadUniversityData(profileData.university.name, profileData.major);
@@ -440,17 +442,17 @@ const Profile: React.FC = () => {
 
   // Calculate degree progress
   const calculateDegreeProgress = (): DegreeProgress => {
-    if (!profile || !availableCourses.length) {
+    if (!profileState.profile || !availableCourses.length) {
       return { totalRequired: 0, completed: 0, inProgress: 0, remaining: 0, percentComplete: 0 };
     }
 
     const requiredCourses = availableCourses.filter(course => 
-      course.required_for_majors.includes(profile.major)
+      course.required_for_majors.includes(profileState.profile.major)
     );
     
     const totalRequired = requiredCourses.length;
-    const completed = profile.completedCourses.length;
-    const inProgress = profile.currentCourses.length;
+    const completed = profileState.profile.completedCourses.length;
+    const inProgress = profileState.profile.currentCourses.length;
     const remaining = Math.max(0, totalRequired - completed - inProgress);
     const percentComplete = totalRequired > 0 ? (completed / totalRequired) * 100 : 0;
 
@@ -459,36 +461,29 @@ const Profile: React.FC = () => {
 
   // Handle field changes
   const handleFieldChange = <K extends keyof StudentProfile>(key: K, value: StudentProfile[K]) => {
-    setProfile((prev) => {
-      if (!prev) return prev;
-      const updated = { ...prev, [key]: value };
-      
-      // Handle cascading changes
-      if (key === 'university' && value) {
-        const uni = value as University;
-        loadUniversityData(uni.name); // Don't pass major yet
-        updated.major = '';
-        updated.concentration = '';
-        setAvailableCourses([]); // Clear courses when university changes
-      } else if (key === 'major' && value && prev.university) {
-        const major = value as string;
-        loadConcentrationData(major);
-        // Load courses for the new major
-        loadCoursesForUniversity(prev.university.name, major).then(courses => {
-          setAvailableCourses(courses);
-        });
-        updated.concentration = '';
-      }
-      
-      return updated;
-    });
+    updateProfile({ [key]: value } as Partial<StudentProfile>);
+    
+    // Handle cascading changes
+    if (key === 'university' && value) {
+      const uni = value as University;
+      loadUniversityData(uni.name);
+      updateProfile({ major: '', concentration: '' });
+      setAvailableCourses([]);
+    } else if (key === 'major' && value && profileState.profile?.university) {
+      const major = value as string;
+      loadConcentrationData(major);
+      loadCoursesForUniversity(profileState.profile.university.name, major).then(courses => {
+        setAvailableCourses(courses);
+      });
+      updateProfile({ concentration: '' });
+    }
   };
 
   // Handle course completion toggles
   const handleCourseToggle = (courseCode: string, listType: 'completed' | 'current' | 'planned') => {
-    if (!profile) return;
+    if (!profileState.profile) return;
 
-    const currentList = profile[`${listType}Courses`] as string[];
+    const currentList = profileState.profile[`${listType}Courses`] as string[];
     const otherLists = [
       listType !== 'completed' ? 'completedCourses' : null,
       listType !== 'current' ? 'currentCourses' : null,
@@ -505,7 +500,7 @@ const Profile: React.FC = () => {
       
       // Remove from other lists to avoid duplicates
       otherLists.forEach(listKey => {
-        const otherList = profile[listKey] as string[];
+        const otherList = profileState.profile[listKey] as string[];
         if (otherList.includes(courseCode)) {
           handleFieldChange(listKey, otherList.filter(code => code !== courseCode));
         }
@@ -542,10 +537,10 @@ const Profile: React.FC = () => {
     });
 
     return groups;
-  }, [availableCourses, profile]);
+  }, [availableCourses, profileState.profile]);
 
   const renderCourseChecklist = () => {
-    if (!profile || !availableCourses.length) {
+    if (!profileState.profile || !availableCourses.length) {
       return (
         <Alert severity="info">
           Select a university and major to see your course requirements.
@@ -557,7 +552,7 @@ const Profile: React.FC = () => {
       if (!courses.length) return null;
 
       const completedCount = courses.filter(course => 
-        profile.completedCourses.includes(course.course_code)
+        profileState.profile.completedCourses.includes(course.course_code)
       ).length;
 
       return (
@@ -574,9 +569,9 @@ const Profile: React.FC = () => {
           <AccordionDetails>
             <List dense>
               {courses.map(course => {
-                const isCompleted = profile.completedCourses.includes(course.course_code);
-                const isCurrent = profile.currentCourses.includes(course.course_code);
-                const isPlanned = profile.plannedCourses.includes(course.course_code);
+                const isCompleted = profileState.profile.completedCourses.includes(course.course_code);
+                const isCurrent = profileState.profile.currentCourses.includes(course.course_code);
+                const isPlanned = profileState.profile.plannedCourses.includes(course.course_code);
 
                 return (
                   <CourseChecklistItem key={course.university_course_id}>
@@ -655,12 +650,12 @@ const Profile: React.FC = () => {
 
   // Save function
   const handleSave = async () => {
-    if (!profile) return;
+    if (!profileState.profile) return;
     setSaving(true);
     setSuccess(false);
     setError(null);
     try {
-      await saveProfile(profile);
+      await saveProfile(profileState.profile);
       setSuccess(true);
     } catch {
       setError('Failed to save profile');
@@ -679,7 +674,7 @@ const Profile: React.FC = () => {
     );
   }
 
-  if (!profile) {
+  if (!profileState.profile) {
     return (
       <ProfileContainer>
         <Alert severity="error">Profile not found.</Alert>
@@ -697,39 +692,39 @@ const Profile: React.FC = () => {
       <HeroSection>
         <ProfileHeader>
           <ProfileAvatar>
-            {profile?.firstName?.charAt(0)?.toUpperCase() || 'S'}
-            {profile?.lastName?.charAt(0)?.toUpperCase() || 'U'}
+            {profileState.profile?.firstName?.charAt(0)?.toUpperCase() || 'S'}
+            {profileState.profile?.lastName?.charAt(0)?.toUpperCase() || 'U'}
           </ProfileAvatar>
           <Box sx={{ flex: 1 }}>
             <Typography variant="h3" sx={{ fontWeight: 700, mb: 1, color: 'text.primary' }}>
-              {profile?.firstName && profile?.lastName 
-                ? `${profile.firstName} ${profile.lastName}`
+              {profileState.profile?.firstName && profileState.profile?.lastName 
+                ? `${profileState.profile.firstName} ${profileState.profile.lastName}`
                 : 'Student Profile'
               }
             </Typography>
             <Typography variant="h6" sx={{ color: 'text.secondary', mb: 2 }}>
-              {profile?.major || 'Select your major'} • {profile?.academicYear || 'Academic Year'}
+              {profile?.major || 'Select your major'} • {profileState.profile?.academicYear || 'Academic Year'}
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              {profile?.university && (
+              {profileState.profile?.university && (
                 <Chip 
-                  label={profile.university.name} 
+                  label={profileState.profile.university.name} 
                   color="primary" 
                   variant="outlined"
                   size="small"
                 />
               )}
-              {profile?.concentration && (
+              {profileState.profile?.concentration && (
                 <Chip 
-                  label={profile.concentration} 
+                  label={profileState.profile.concentration} 
                   color="secondary" 
                   variant="outlined"
                   size="small"
                 />
               )}
-              {profile?.gpa > 0 && (
+              {profileState.profile?.gpa > 0 && (
                 <Chip 
-                  label={`GPA: ${profile.gpa.toFixed(2)}`} 
+                  label={`GPA: ${profileState.profile.gpa.toFixed(2)}`} 
                   color="success" 
                   variant="outlined"
                   size="small"
@@ -762,7 +757,7 @@ const Profile: React.FC = () => {
               <Grid item xs={12} sm={6}>
                 <TextField
                   label="First Name"
-                  value={profile.firstName}
+                  value={profileState.profile.firstName}
                   onChange={e => handleFieldChange('firstName', e.target.value)}
                   fullWidth
                   required
@@ -771,7 +766,7 @@ const Profile: React.FC = () => {
               <Grid item xs={12} sm={6}>
                 <TextField
                   label="Last Name"
-                  value={profile.lastName}
+                  value={profileState.profile.lastName}
                   onChange={e => handleFieldChange('lastName', e.target.value)}
                   fullWidth
                   required
@@ -780,7 +775,7 @@ const Profile: React.FC = () => {
               <Grid item xs={12}>
                 <TextField
                   label="Email"
-                  value={profile.email}
+                  value={profileState.profile.email}
                   onChange={e => handleFieldChange('email', e.target.value)}
                   fullWidth
                   required
@@ -790,7 +785,7 @@ const Profile: React.FC = () => {
               <Grid item xs={12}>
                 <TextField
                   label="Student ID"
-                  value={profile.studentId}
+                  value={profileState.profile.studentId}
                   onChange={e => handleFieldChange('studentId', e.target.value)}
                   fullWidth
                   required
@@ -816,7 +811,7 @@ const Profile: React.FC = () => {
                 <Autocomplete
                   options={universities}
                   getOptionLabel={(option) => option.name}
-                  value={profile.university}
+                  value={profileState.profile.university}
                   onChange={(_, value) => handleFieldChange('university', value)}
                   renderInput={(params) => <TextField {...params} label="University" fullWidth required />}
                   isOptionEqualToValue={(option, value) => !!option && !!value && option.name === value.name}
@@ -826,10 +821,10 @@ const Profile: React.FC = () => {
                 <FormControl fullWidth>
                   <InputLabel>Major</InputLabel>
                   <Select
-                    value={profile.major}
+                    value={profileState.profile.major}
                     label="Major"
                     onChange={e => handleFieldChange('major', e.target.value)}
-                    disabled={!profile.university}
+                    disabled={!profileState.profile.university}
                   >
                     {availableMajors.map(m => <MenuItem key={m} value={m}>{m}</MenuItem>)}
                   </Select>
@@ -839,10 +834,10 @@ const Profile: React.FC = () => {
                 <FormControl fullWidth>
                   <InputLabel>Concentration</InputLabel>
                   <Select
-                    value={profile.concentration}
+                    value={profileState.profile.concentration}
                     label="Concentration"
                     onChange={e => handleFieldChange('concentration', e.target.value)}
-                    disabled={!profile.major}
+                    disabled={!profileState.profile.major}
                   >
                     {availableConcentrations.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
                   </Select>
@@ -852,7 +847,7 @@ const Profile: React.FC = () => {
                 <FormControl fullWidth>
                   <InputLabel>Academic Year</InputLabel>
                   <Select
-                    value={profile.academicYear}
+                    value={profileState.profile.academicYear}
                     label="Academic Year"
                     onChange={e => handleFieldChange('academicYear', e.target.value)}
                   >
@@ -866,7 +861,7 @@ const Profile: React.FC = () => {
                 <TextField
                   label="Expected Graduation"
                   type="month"
-                  value={profile.expectedGraduation}
+                  value={profileState.profile.expectedGraduation}
                   onChange={e => handleFieldChange('expectedGraduation', e.target.value)}
                   fullWidth
                 />
@@ -887,9 +882,9 @@ const Profile: React.FC = () => {
             </SectionHeader>
             <Grid container spacing={2}>
               <Grid item xs={12}>
-                <Typography gutterBottom>Current GPA: {profile.gpa}</Typography>
+                <Typography gutterBottom>Current GPA: {profileState.profile.gpa}</Typography>
                 <Slider
-                  value={profile.gpa}
+                  value={profileState.profile.gpa}
                   min={0}
                   max={4}
                   step={0.01}
@@ -902,7 +897,7 @@ const Profile: React.FC = () => {
                 <TextField
                   label="Total Credits"
                   type="number"
-                  value={profile.totalCredits}
+                  value={profileState.profile.totalCredits}
                   onChange={e => handleFieldChange('totalCredits', Number(e.target.value))}
                   fullWidth
                 />
@@ -911,7 +906,7 @@ const Profile: React.FC = () => {
                 <TextField
                   label="Current Semester Credits"
                   type="number"
-                  value={profile.currentSemesterCredits}
+                  value={profileState.profile.currentSemesterCredits}
                   onChange={e => handleFieldChange('currentSemesterCredits', Number(e.target.value))}
                   fullWidth
                 />
