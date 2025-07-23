@@ -25,9 +25,11 @@ import {
   ChevronRight as ChevronRightIcon,
   Psychology as PsychologyIcon,
   Person as PersonIcon,
+  ExitToApp as SignOutIcon,
 } from '@mui/icons-material';
 import { alpha, styled } from '@mui/material/styles';
-// TODO: Replace with AWS Cognito authentication
+import { useAuth } from '../../contexts/AuthContext';
+import AuthButton from '../AuthButton';
 
 const drawerWidth = 280;
 const collapsedDrawerWidth = 72;
@@ -177,13 +179,15 @@ const Navigation: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   
-  // TODO: Replace with AWS Cognito user data
-  const user = {
-    firstName: 'Demo',
-    lastName: 'User',
-    email: 'demo@example.com',
-    avatar: undefined
-  };
+  const { user, signOut } = useAuth();
+  
+  // Parse user data
+  const userData = user ? {
+    firstName: user.attributes?.given_name || user.username?.split('@')[0] || 'User',
+    lastName: user.attributes?.family_name || '',
+    email: user.email || user.username,
+    avatar: user.attributes?.picture
+  } : null;
 
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
@@ -269,22 +273,61 @@ const Navigation: React.FC = () => {
       {/* User Profile Section */}
       <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-          <ProfileAvatar
-            src={user?.avatar}
-            alt={`${user?.firstName} ${user?.lastName}`}
-            sx={{ width: isCollapsed ? 32 : 44, height: isCollapsed ? 32 : 44 }}
-          >
-            {!user?.avatar && <PersonIcon />}
-          </ProfileAvatar>
-          {!isCollapsed && (
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, lineHeight: 1.2 }} noWrap>
-                {user?.firstName} {user?.lastName}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" noWrap>
-                {user?.email}
-              </Typography>
-            </Box>
+          {userData ? (
+            <>
+              {isCollapsed ? (
+                <Tooltip title={`Sign Out (${userData?.firstName})`} placement="right">
+                  <IconButton 
+                    onClick={() => signOut()} 
+                    sx={{ 
+                      p: 1,
+                      '&:hover': { 
+                        backgroundColor: alpha(theme.palette.error.main, 0.1)
+                      }
+                    }}
+                  >
+                    <SignOutIcon fontSize="small" color="error" />
+                  </IconButton>
+                </Tooltip>
+              ) : (
+                <ProfileAvatar
+                  src={userData?.avatar}
+                  alt={`${userData?.firstName} ${userData?.lastName}`}
+                  sx={{ width: 44, height: 44 }}
+                >
+                  {!userData?.avatar && <PersonIcon />}
+                </ProfileAvatar>
+              )}
+              {!isCollapsed && (
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, lineHeight: 1.2 }} noWrap>
+                    {userData?.firstName} {userData?.lastName}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" noWrap>
+                    {userData?.email}
+                  </Typography>
+                </Box>
+              )}
+              {!isCollapsed && (
+                <Tooltip title="Sign Out">
+                  <IconButton 
+                    onClick={() => signOut()} 
+                    size="small"
+                    sx={{ 
+                      color: 'text.secondary',
+                      '&:hover': { 
+                        color: 'error.main',
+                        backgroundColor: alpha(theme.palette.error.main, 0.1)
+                      }
+                    }}
+                  >
+                    <SignOutIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              )}
+            </>
+          ) : (
+            !isCollapsed && <AuthButton />
           )}
         </Box>
       </Box>
@@ -317,6 +360,11 @@ const Navigation: React.FC = () => {
 
       {/* Footer Section */}
       <Box sx={{ p: 1.5, borderTop: `1px solid ${theme.palette.divider}` }}>
+        {!isCollapsed && userData && (
+          <Box sx={{ mb: 2 }}>
+            <AuthButton />
+          </Box>
+        )}
         <NavItem disablePadding>
           <Tooltip title={isCollapsed ? 'Settings' : ''} placement="right">
             <StyledListItemButton>

@@ -11,27 +11,30 @@ import NotFound from './pages/NotFound';
 import Advising from './pages/Advising';
 import { CourseProvider } from './context/CourseContext';
 import { ProfileProvider } from './context/ProfileContext';
+import { AuthProvider } from './contexts/AuthContext';
 
 const App: React.FC = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <ProfileProvider>
-        <CourseProvider>
-          <Router>
-            <Routes>
-              <Route path="/" element={<Navigation />}>
-                <Route index element={<Navigate to="/dashboard" replace />} />
-                <Route path="dashboard" element={<Dashboard />} />
-                <Route path="profile" element={<Profile />} />
-                <Route path="schedule" element={<Schedule />} />
-                <Route path="advising" element={<Advising />} />
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Router>
-        </CourseProvider>
-      </ProfileProvider>
+      <AuthProvider>
+        <ProfileProvider>
+          <CourseProvider>
+            <Router>
+              <Routes>
+                <Route path="/" element={<Navigation />}>
+                  <Route index element={<Navigate to="/dashboard" replace />} />
+                  <Route path="dashboard" element={<Dashboard />} />
+                  <Route path="profile" element={<Profile />} />
+                  <Route path="schedule" element={<Schedule />} />
+                  <Route path="advising" element={<Advising />} />
+                </Route>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Router>
+          </CourseProvider>
+        </ProfileProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 };
