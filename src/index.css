@@ -32,8 +32,8 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #F8FAFC;
-  color: #1E293B;
+  background: linear-gradient(135deg, #F0F7FF 0%, #E5F0FF 100%);
+  color: #1A1F24;
 }
 
 h1 {
@@ -88,23 +88,23 @@ button:focus-visible {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
+  background: #B8D1F0;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+  background: #8BA3C7;
 }
 
 /* Selection */
 ::selection {
-  background: rgba(37, 99, 235, 0.2);
-  color: #1E40AF;
+  background: rgba(184, 209, 240, 0.2);
+  color: #8BA3C7;
 }
 
 /* Focus styles */
 :focus-visible {
-  outline: 2px solid #2563EB;
+  outline: 2px solid #B8D1F0;
   outline-offset: 2px;
 }
 

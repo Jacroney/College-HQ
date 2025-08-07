@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useProfileContext } from '../context/ProfileContext';
+import { useAuth } from '../contexts/AuthContext';
+import { authApi } from '../services/api';
 import {
   Box,
   Paper,
@@ -177,7 +180,7 @@ const ProfileAvatar = styled(Box)(({ theme }) => ({
 const SectionPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
   marginBottom: theme.spacing(3),
-  background: theme.palette.surface?.paper || theme.palette.background.paper,
+  background: theme.palette.background.paper, // fixed: removed theme.palette.surface
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: theme.spacing(2),
   boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)',
@@ -238,13 +241,13 @@ const StatsContainer = styled(Box)(({ theme }) => ({
  */
 const StatCard = styled(Box)(({ theme }) => ({
   padding: theme.spacing(2.5),
-  background: theme.palette.surface?.paper || theme.palette.background.paper,
+  background: theme.palette.background.paper, // fixed: removed theme.palette.surface
   borderRadius: theme.spacing(1.5),
   border: `1px solid ${theme.palette.divider}`,
   textAlign: 'center',
   transition: 'all 0.2s ease',
   '&:hover': {
-    background: theme.palette.surface?.elevated || theme.palette.background.default,
+    background: theme.palette.background.default, // fixed: removed theme.palette.surface
     transform: 'translateY(-1px)',
   },
 }));
@@ -252,16 +255,19 @@ const StatCard = styled(Box)(({ theme }) => ({
 // --- API Functions ---
 const API_BASE_URL = 'https://lm8ngppg22.execute-api.us-east-1.amazonaws.com/dev';
 
-// Get current user ID (you'll need to implement proper auth)
-function getCurrentUserId(): string {
-  // For now, generate a consistent user ID based on browser
-  // In production, this would come from your authentication system
-  let userId = localStorage.getItem('college_hq_user_id');
-  if (!userId) {
-    userId = 'user_' + Math.random().toString(36).substring(2, 15);
-    localStorage.setItem('college_hq_user_id', userId);
+// Get current user ID from Cognito (sub is the universal unique identifier)
+function getCurrentUserId(user: any): string {
+  // Use Cognito's sub (subject) as the unique user ID - this is the standard approach
+  if (user?.attributes?.sub) {
+    return user.attributes.sub;
   }
-  return userId;
+  if (user?.username) {
+    return user.username; // Fallback to username if sub not available
+  }
+  
+  // Don't return anonymous - return null if no user
+  console.error('No authenticated user found');
+  return null;
 }
 
 async function loadUniversities(): Promise<University[]> {
@@ -273,106 +279,76 @@ async function loadUniversities(): Promise<University[]> {
   ];
 }
 
-async function loadCoursesForUniversity(universityName: string): Promise<Course[]> {
+async function loadCoursesForUniversity(universityName: string, major?: string, user?: any): Promise<Course[]> {
   try {
-    console.log('Loading courses for university:', universityName);
+    console.log('Loading courses for university:', universityName, 'major:', major);
     
-    // This will eventually call your course catalog API
-    // For now, return the sample courses to test the system
-    const sampleCourses: Course[] = [
-      {
-        university_course_id: "calpoly_csc101",
-        course_code: "CSC 101",
-        course_name: "Fundamentals of Computer Science",
-        units: 4,
-        description: "Basic principles of algorithmic problem solving and programming using Python. Covers variables, data types, control structures, functions, and basic data structures.",
-        prerequisites: [],
-        difficulty_level: "Introductory",
-        required_for_majors: ["Computer Science"]
+    // If no major is selected yet, return empty array
+    if (!major) {
+      console.log('No major selected, returning empty course list');
+      return [];
+    }
+    
+    const userId = getCurrentUserId(user);
+    if (!userId) {
+      console.log('No authenticated user, returning empty course list');
+      return [];
+    }
+    
+    // Call your enhanced profile Lambda with course lookup action
+    const response = await fetch(`${API_BASE_URL}/profile/${userId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      {
-        university_course_id: "calpoly_csc202",
-        course_code: "CSC 202",
-        course_name: "Data Structures",
-        units: 4,
-        description: "Implementation and analysis of fundamental data structures including arrays, linked lists, stacks, queues, trees, and hash tables.",
-        prerequisites: ["CSC 101"],
-        difficulty_level: "Intermediate",
-        required_for_majors: ["Computer Science"]
-      },
-      {
-        university_course_id: "calpoly_csc203",
-        course_code: "CSC 203",
-        course_name: "Project-Based Object-Oriented Programming",
-        units: 4,
-        description: "Advanced programming using object-oriented techniques. Large-scale software development and design patterns using Java.",
-        prerequisites: ["CSC 202"],
-        difficulty_level: "Intermediate",
-        required_for_majors: ["Computer Science"]
-      },
-      {
-        university_course_id: "calpoly_csc225",
-        course_code: "CSC 225",
-        course_name: "Computer Organization",
-        units: 4,
-        description: "Introduction to computer organization and assembly language programming. Number systems and basic computer architecture.",
-        prerequisites: ["CSC 202"],
-        difficulty_level: "Intermediate",
-        required_for_majors: ["Computer Science"]
-      },
-      {
-        university_course_id: "calpoly_csc348",
-        course_code: "CSC 348",
-        course_name: "Discrete Structures",
-        units: 4,
-        description: "Discrete mathematical structures and their applications to computer science including logic, sets, functions, and graph theory.",
-        prerequisites: ["CSC 202", "MATH 141"],
-        difficulty_level: "Intermediate",
-        required_for_majors: ["Computer Science"]
-      },
-      {
-        university_course_id: "calpoly_math141",
-        course_code: "MATH 141",
-        course_name: "Calculus I",
-        units: 4,
-        description: "Limits, derivatives, applications of derivatives, introduction to integration. Designed for students in mathematics, science, and engineering.",
-        prerequisites: [],
-        difficulty_level: "Intermediate",
-        required_for_majors: ["Computer Science", "Engineering", "Mathematics"]
-      },
-      {
-        university_course_id: "calpoly_math142",
-        course_code: "MATH 142",
-        course_name: "Calculus II",
-        units: 4,
-        description: "Techniques of integration, applications of integration, infinite sequences and series.",
-        prerequisites: ["MATH 141"],
-        difficulty_level: "Intermediate",
-        required_for_majors: ["Computer Science", "Engineering", "Mathematics"]
-      },
-      {
-        university_course_id: "calpoly_math143",
-        course_code: "MATH 143",
-        course_name: "Calculus III",
-        units: 4,
-        description: "Infinite sequences and series, vector algebra, parametric curves.",
-        prerequisites: ["MATH 142"],
-        difficulty_level: "Intermediate",
-        required_for_majors: ["Computer Science", "Engineering", "Mathematics"]
-      }
-    ];
+      body: JSON.stringify({
+        action: 'getCourses',
+        university: universityName,
+        major: major
+      }),
+    });
 
-    // Filter courses for the specific university
-    if (universityName === "Cal Poly San Luis Obispo") {
-      return sampleCourses;
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Failed to load courses:', errorData);
+      
+      // If it's a 404, the major isn't available yet
+      if (response.status === 404) {
+        console.log('Degree requirements not found for this major');
+        return [];
+      }
+      
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Courses loaded successfully:', data);
+    
+    if (data.success && data.courses) {
+      // Convert the API response format to your Course interface
+      return data.courses.map((course: any) => ({
+        university_course_id: `${universityName.toLowerCase().replace(/\s+/g, '')}_${course.id.toLowerCase().replace(/\s+/g, '')}`,
+        course_code: course.id,
+        course_name: course.name,
+        units: course.units,
+        description: `${course.name} - ${course.units} units`, // You could enhance this with better descriptions
+        prerequisites: [], // Could be enhanced to parse prerequisites
+        difficulty_level: course.type === 'major' ? 'Intermediate' : 'Introductory',
+        required_for_majors: [major] // This course is required for the selected major
+      }));
     }
     
     return [];
+    
   } catch (error) {
     console.error('Error loading courses:', error);
+    
+    // Return empty array on error rather than sample data
     return [];
   }
 }
+
+// Also update the loadUniversityData function to pass the major:
 
 async function loadMajorsForUniversity(universityName: string): Promise<string[]> {
   if (universityName === "Cal Poly San Luis Obispo") {
@@ -404,8 +380,10 @@ async function loadConcentrationsForMajor(major: string): Promise<string[]> {
 
 // --- Main Component ---
 const Profile: React.FC = () => {
-  // Existing state
-  const [profile, setProfile] = useState<StudentProfile | null>(null);
+  const { state: profileState, updateProfile, dispatch } = useProfileContext();
+  const { user, updateUserProfile, signIn } = useAuth();
+  
+  // Local state for form
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -425,14 +403,14 @@ const Profile: React.FC = () => {
       try {
         const [universitiesData, profileData] = await Promise.all([
           loadUniversities(),
-          loadProfile()
+          loadProfile(user)
         ]);
         
         setUniversities(universitiesData);
-        setProfile(profileData);
+        dispatch({ type: 'SET_PROFILE', payload: profileData });
         
         if (profileData.university) {
-          await loadUniversityData(profileData.university.name);
+          await loadUniversityData(profileData.university.name, profileData.major);
         }
       } catch (err) {
         setError('Failed to load profile data');
@@ -441,19 +419,27 @@ const Profile: React.FC = () => {
       }
     };
     
-    initializeData();
-  }, []);
+    // Only run if we have a user
+    if (user) {
+      initializeData();
+    } else {
+      setLoading(false);
+    }
+  }, [user]); // Re-run when user changes
 
   // Load university-specific data when university changes
-  const loadUniversityData = async (universityName: string) => {
+  const loadUniversityData = async (universityName: string, major?: string) => {
     try {
-      const [majorsData, coursesData] = await Promise.all([
-        loadMajorsForUniversity(universityName),
-        loadCoursesForUniversity(universityName)
-      ]);
-      
+      const majorsData = await loadMajorsForUniversity(universityName);
       setAvailableMajors(majorsData);
-      setAvailableCourses(coursesData);
+      
+      // Only load courses if we have a major
+      if (major) {
+        const coursesData = await loadCoursesForUniversity(universityName, major, user);
+        setAvailableCourses(coursesData);
+      } else {
+        setAvailableCourses([]);
+      }
     } catch (err) {
       console.error('Error loading university data:', err);
     }
@@ -471,17 +457,17 @@ const Profile: React.FC = () => {
 
   // Calculate degree progress
   const calculateDegreeProgress = (): DegreeProgress => {
-    if (!profile || !availableCourses.length) {
+    if (!profileState.profile || !availableCourses.length) {
       return { totalRequired: 0, completed: 0, inProgress: 0, remaining: 0, percentComplete: 0 };
     }
 
     const requiredCourses = availableCourses.filter(course => 
-      course.required_for_majors.includes(profile.major)
+      course.required_for_majors.includes(profileState.profile!.major)
     );
-    
+    2
     const totalRequired = requiredCourses.length;
-    const completed = profile.completedCourses.length;
-    const inProgress = profile.currentCourses.length;
+    const completed = profileState.profile!.completedCourses.length;
+    const inProgress = profileState.profile!.currentCourses.length;
     const remaining = Math.max(0, totalRequired - completed - inProgress);
     const percentComplete = totalRequired > 0 ? (completed / totalRequired) * 100 : 0;
 
@@ -490,30 +476,29 @@ const Profile: React.FC = () => {
 
   // Handle field changes
   const handleFieldChange = <K extends keyof StudentProfile>(key: K, value: StudentProfile[K]) => {
-    setProfile((prev) => {
-      if (!prev) return prev;
-      const updated = { ...prev, [key]: value };
-      
-      // Handle cascading changes
-      if (key === 'university' && value) {
-        const uni = value as University;
-        loadUniversityData(uni.name);
-        updated.major = '';
-        updated.concentration = '';
-      } else if (key === 'major' && value) {
-        loadConcentrationData(value as string);
-        updated.concentration = '';
-      }
-      
-      return updated;
-    });
+    updateProfile({ [key]: value } as Partial<StudentProfile>);
+    
+    // Handle cascading changes
+    if (key === 'university' && value) {
+      const uni = value as University;
+      loadUniversityData(uni.name);
+      updateProfile({ major: '', concentration: '' });
+      setAvailableCourses([]);
+    } else if (key === 'major' && value && profileState.profile?.university) {
+      const major = value as string;
+      loadConcentrationData(major);
+      loadCoursesForUniversity(profileState.profile.university.name, major, user).then(courses => {
+        setAvailableCourses(courses);
+      });
+      updateProfile({ concentration: '' });
+    }
   };
 
   // Handle course completion toggles
   const handleCourseToggle = (courseCode: string, listType: 'completed' | 'current' | 'planned') => {
-    if (!profile) return;
+    if (!profileState.profile) return;
 
-    const currentList = profile[`${listType}Courses`] as string[];
+    const currentList = profileState.profile[`${listType}Courses`] as string[];
     const otherLists = [
       listType !== 'completed' ? 'completedCourses' : null,
       listType !== 'current' ? 'currentCourses' : null,
@@ -530,7 +515,7 @@ const Profile: React.FC = () => {
       
       // Remove from other lists to avoid duplicates
       otherLists.forEach(listKey => {
-        const otherList = profile[listKey] as string[];
+        const otherList = profileState.profile![listKey] as string[];
         if (otherList.includes(courseCode)) {
           handleFieldChange(listKey, otherList.filter(code => code !== courseCode));
         }
@@ -542,7 +527,7 @@ const Profile: React.FC = () => {
 
   // Group courses by category
   const groupedCourses = React.useMemo(() => {
-    if (!availableCourses.length || !profile) return {};
+    if (!availableCourses.length || !profileState.profile) return {};
 
     const groups: { [key: string]: Course[] } = {
       'Core Requirements': [],
@@ -567,10 +552,10 @@ const Profile: React.FC = () => {
     });
 
     return groups;
-  }, [availableCourses, profile]);
+  }, [availableCourses, profileState.profile]);
 
   const renderCourseChecklist = () => {
-    if (!profile || !availableCourses.length) {
+    if (!profileState.profile || !availableCourses.length) {
       return (
         <Alert severity="info">
           Select a university and major to see your course requirements.
@@ -582,7 +567,7 @@ const Profile: React.FC = () => {
       if (!courses.length) return null;
 
       const completedCount = courses.filter(course => 
-        profile.completedCourses.includes(course.course_code)
+        profileState.profile!.completedCourses.includes(course.course_code)
       ).length;
 
       return (
@@ -599,9 +584,10 @@ const Profile: React.FC = () => {
           <AccordionDetails>
             <List dense>
               {courses.map(course => {
-                const isCompleted = profile.completedCourses.includes(course.course_code);
-                const isCurrent = profile.currentCourses.includes(course.course_code);
-                const isPlanned = profile.plannedCourses.includes(course.course_code);
+                // Only declare these variables here, not above
+                const isCompleted = profileState.profile!.completedCourses.includes(course.course_code);
+                const isCurrent = profileState.profile!.currentCourses.includes(course.course_code);
+                const isPlanned = profileState.profile!.plannedCourses.includes(course.course_code);
 
                 return (
                   <CourseChecklistItem key={course.university_course_id}>
@@ -680,14 +666,15 @@ const Profile: React.FC = () => {
 
   // Save function
   const handleSave = async () => {
-    if (!profile) return;
+    if (!profileState.profile || !user) return;
     setSaving(true);
     setSuccess(false);
     setError(null);
     try {
-      await saveProfile(profile);
+      await saveProfile(profileState.profile, user);
       setSuccess(true);
-    } catch {
+    } catch (error) {
+      console.error('Save error:', error);
       setError('Failed to save profile');
     } finally {
       setSaving(false);
@@ -704,7 +691,18 @@ const Profile: React.FC = () => {
     );
   }
 
-  if (!profile) {
+  // Show sign-in prompt if user is not authenticated
+  if (!user) {
+    return (
+      <ProfileContainer>
+        <Alert severity="info">
+          Please sign in to view your profile.
+        </Alert>
+      </ProfileContainer>
+    );
+  }
+
+  if (!profileState.profile) {
     return (
       <ProfileContainer>
         <Alert severity="error">Profile not found.</Alert>
@@ -722,39 +720,39 @@ const Profile: React.FC = () => {
       <HeroSection>
         <ProfileHeader>
           <ProfileAvatar>
-            {profile?.firstName?.charAt(0)?.toUpperCase() || 'S'}
-            {profile?.lastName?.charAt(0)?.toUpperCase() || 'U'}
+            {profileState.profile?.firstName?.charAt(0)?.toUpperCase() || 'S'}
+            {profileState.profile?.lastName?.charAt(0)?.toUpperCase() || 'U'}
           </ProfileAvatar>
           <Box sx={{ flex: 1 }}>
             <Typography variant="h3" sx={{ fontWeight: 700, mb: 1, color: 'text.primary' }}>
-              {profile?.firstName && profile?.lastName 
-                ? `${profile.firstName} ${profile.lastName}`
+              {profileState.profile?.firstName && profileState.profile?.lastName 
+                ? `${profileState.profile.firstName} ${profileState.profile.lastName}`
                 : 'Student Profile'
               }
             </Typography>
             <Typography variant="h6" sx={{ color: 'text.secondary', mb: 2 }}>
-              {profile?.major || 'Select your major'} • {profile?.academicYear || 'Academic Year'}
+              {profileState.profile?.major || 'Select your major'} • {profileState.profile?.academicYear || 'Academic Year'}
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              {profile?.university && (
+              {profileState.profile?.university && (
                 <Chip 
-                  label={profile.university.name} 
+                  label={profileState.profile.university.name} 
                   color="primary" 
                   variant="outlined"
                   size="small"
                 />
               )}
-              {profile?.concentration && (
+              {profileState.profile?.concentration && (
                 <Chip 
-                  label={profile.concentration} 
+                  label={profileState.profile.concentration} 
                   color="secondary" 
                   variant="outlined"
                   size="small"
                 />
               )}
-              {profile?.gpa > 0 && (
+              {profileState.profile?.gpa > 0 && (
                 <Chip 
-                  label={`GPA: ${profile.gpa.toFixed(2)}`} 
+                  label={`GPA: ${profileState.profile.gpa.toFixed(2)}`} 
                   color="success" 
                   variant="outlined"
                   size="small"
@@ -787,7 +785,7 @@ const Profile: React.FC = () => {
               <Grid item xs={12} sm={6}>
                 <TextField
                   label="First Name"
-                  value={profile.firstName}
+                  value={profileState.profile.firstName}
                   onChange={e => handleFieldChange('firstName', e.target.value)}
                   fullWidth
                   required
@@ -796,7 +794,7 @@ const Profile: React.FC = () => {
               <Grid item xs={12} sm={6}>
                 <TextField
                   label="Last Name"
-                  value={profile.lastName}
+                  value={profileState.profile.lastName}
                   onChange={e => handleFieldChange('lastName', e.target.value)}
                   fullWidth
                   required
@@ -805,7 +803,7 @@ const Profile: React.FC = () => {
               <Grid item xs={12}>
                 <TextField
                   label="Email"
-                  value={profile.email}
+                  value={profileState.profile.email}
                   onChange={e => handleFieldChange('email', e.target.value)}
                   fullWidth
                   required
@@ -815,7 +813,7 @@ const Profile: React.FC = () => {
               <Grid item xs={12}>
                 <TextField
                   label="Student ID"
-                  value={profile.studentId}
+                  value={profileState.profile.studentId}
                   onChange={e => handleFieldChange('studentId', e.target.value)}
                   fullWidth
                   required
@@ -841,7 +839,7 @@ const Profile: React.FC = () => {
                 <Autocomplete
                   options={universities}
                   getOptionLabel={(option) => option.name}
-                  value={profile.university}
+                  value={profileState.profile.university}
                   onChange={(_, value) => handleFieldChange('university', value)}
                   renderInput={(params) => <TextField {...params} label="University" fullWidth required />}
                   isOptionEqualToValue={(option, value) => !!option && !!value && option.name === value.name}
@@ -851,10 +849,10 @@ const Profile: React.FC = () => {
                 <FormControl fullWidth>
                   <InputLabel>Major</InputLabel>
                   <Select
-                    value={profile.major}
+                    value={profileState.profile.major}
                     label="Major"
                     onChange={e => handleFieldChange('major', e.target.value)}
-                    disabled={!profile.university}
+                    disabled={!profileState.profile.university}
                   >
                     {availableMajors.map(m => <MenuItem key={m} value={m}>{m}</MenuItem>)}
                   </Select>
@@ -864,10 +862,10 @@ const Profile: React.FC = () => {
                 <FormControl fullWidth>
                   <InputLabel>Concentration</InputLabel>
                   <Select
-                    value={profile.concentration}
+                    value={profileState.profile.concentration}
                     label="Concentration"
                     onChange={e => handleFieldChange('concentration', e.target.value)}
-                    disabled={!profile.major}
+                    disabled={!profileState.profile.major}
                   >
                     {availableConcentrations.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
                   </Select>
@@ -877,7 +875,7 @@ const Profile: React.FC = () => {
                 <FormControl fullWidth>
                   <InputLabel>Academic Year</InputLabel>
                   <Select
-                    value={profile.academicYear}
+                    value={profileState.profile.academicYear}
                     label="Academic Year"
                     onChange={e => handleFieldChange('academicYear', e.target.value)}
                   >
@@ -891,7 +889,7 @@ const Profile: React.FC = () => {
                 <TextField
                   label="Expected Graduation"
                   type="month"
-                  value={profile.expectedGraduation}
+                  value={profileState.profile.expectedGraduation}
                   onChange={e => handleFieldChange('expectedGraduation', e.target.value)}
                   fullWidth
                 />
@@ -912,9 +910,9 @@ const Profile: React.FC = () => {
             </SectionHeader>
             <Grid container spacing={2}>
               <Grid item xs={12}>
-                <Typography gutterBottom>Current GPA: {profile.gpa}</Typography>
+                <Typography gutterBottom>Current GPA: {profileState.profile.gpa}</Typography>
                 <Slider
-                  value={profile.gpa}
+                  value={profileState.profile.gpa}
                   min={0}
                   max={4}
                   step={0.01}
@@ -927,7 +925,7 @@ const Profile: React.FC = () => {
                 <TextField
                   label="Total Credits"
                   type="number"
-                  value={profile.totalCredits}
+                  value={profileState.profile.totalCredits}
                   onChange={e => handleFieldChange('totalCredits', Number(e.target.value))}
                   fullWidth
                 />
@@ -936,7 +934,7 @@ const Profile: React.FC = () => {
                 <TextField
                   label="Current Semester Credits"
                   type="number"
-                  value={profile.currentSemesterCredits}
+                  value={profileState.profile.currentSemesterCredits}
                   onChange={e => handleFieldChange('currentSemesterCredits', Number(e.target.value))}
                   fullWidth
                 />
@@ -1048,69 +1046,73 @@ const Profile: React.FC = () => {
   );
 };
 
-// Placeholder functions (you'll replace these with real API calls)
-async function loadProfile(): Promise<StudentProfile> {
+// Profile API functions using Cognito sub as user ID
+async function loadProfile(user: any): Promise<StudentProfile> {
   try {
-    const userId = getCurrentUserId();
-    console.log('Loading profile for user:', userId);
-    
-    const response = await fetch(`${API_BASE_URL}/profile/${userId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (!user) {
+      return createDefaultProfile(user);
     }
 
-    const data = await response.json();
-    console.log('Profile loaded:', data);
-    
-    return data.profile;
-  } catch (error) {
+    // Try to get existing profile from API
+    const profile = await authApi.getProfile();
+    return profile.data;
+  } catch (error: any) {
     console.error('Error loading profile:', error);
-    // Return default profile if loading fails
-    return createDefaultProfile();
+    
+    // If profile doesn't exist (404), create a new one
+    if (error.response?.status === 404) {
+      console.log('Profile not found, creating new profile for user');
+      return await createInitialProfile(user);
+    }
+    
+    // For other errors, return default profile
+    return createDefaultProfile(user);
   }
 }
 
-async function saveProfile(profile: StudentProfile): Promise<void> {
+async function saveProfile(profile: StudentProfile, user: any): Promise<void> {
   try {
-    const userId = getCurrentUserId();
-    console.log('Saving profile for user:', userId, profile);
-    
-    const response = await fetch(`${API_BASE_URL}/profile/${userId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(profile),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    if (!user) {
+      throw new Error('User not authenticated');
     }
 
-    const data = await response.json();
-    console.log('Profile saved successfully:', data);
+    await authApi.updateProfile(profile);
+    console.log('Profile saved successfully');
   } catch (error) {
     console.error('Error saving profile:', error);
     throw error;
   }
 }
 
+// Create initial profile for new users
+async function createInitialProfile(user: any): Promise<StudentProfile> {
+  try {
+    const initialProfile = createDefaultProfile(user);
+    
+    // Create profile in backend
+    await authApi.createProfile({
+      email: initialProfile.email,
+      name: `${initialProfile.firstName} ${initialProfile.lastName}`.trim() || 'Student'
+    });
+    
+    return initialProfile;
+  } catch (error) {
+    console.error('Error creating initial profile:', error);
+    return createDefaultProfile(user);
+  }
+}
+
+
 /**
- * Create a default profile with empty values
+ * Create a default profile with Cognito user data as starting point
  * @returns {StudentProfile} Default profile object
  */
-function createDefaultProfile(): StudentProfile {
+function createDefaultProfile(user?: any): StudentProfile {
+  const attrs = user?.attributes || {};
   return {
-    firstName: '',
-    lastName: '',
-    email: '',
+    firstName: attrs.given_name || '',
+    lastName: attrs.family_name || '',
+    email: user?.email || attrs.email || '',
     studentId: '',
     university: null,
     college: '',
@@ -1139,9 +1141,9 @@ function createDefaultProfile(): StudentProfile {
  * @param {string} message - Message to send to the advising agent
  * @returns {Promise<string>} Response from the advising agent
  */
-async function testAdvisingAgent(message: string): Promise<string> {
+async function testAdvisingAgent(message: string, user: any): Promise<string> {
   try {
-    const userId = getCurrentUserId();
+    const userId = getCurrentUserId(user);
     
     const response = await fetch(`${API_BASE_URL}/advising`, {
       method: 'POST',

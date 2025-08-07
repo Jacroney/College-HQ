@@ -1,0 +1,50 @@
+{
+  "DynamoDB_Table_Name": "college-hq-users",
+  "Primary_Key": "userId (String) - Cognito sub UUID",
+  "Sample_Item": {
+    "userId": "12345678-1234-1234-1234-123456789012",
+    "email": "student@example.com",
+    "firstName": "John",
+    "lastName": "Doe", 
+    "studentId": "12345678",
+    "university": {
+      "name": "Cal Poly San Luis Obispo",
+      "domain": "calpoly.edu", 
+      "country": "USA"
+    },
+    "college": "College of Engineering",
+    "major": "Computer Science",
+    "concentration": "Software Engineering",
+    "minor": "Mathematics",
+    "academicYear": "Junior",
+    "expectedGraduation": "2025-06",
+    "gpa": 3.75,
+    "totalCredits": 90,
+    "currentSemesterCredits": 16,
+    "careerGoals": ["Software Engineer", "Tech Lead"],
+    "learningStyle": "Visual",
+    "academicInterests": ["AI", "Web Development"],
+    "advisorName": "Dr. Smith",
+    "advisorEmail": "advisor@university.edu",
+    "advisorNotes": "Student is doing well in advanced courses",
+    "completedCourses": ["CSC 101", "CSC 102", "MATH 141", "MATH 142"],
+    "currentCourses": ["CSC 348", "CSC 357", "MATH 244"],
+    "plannedCourses": ["CSC 365", "CSC 430", "CSC 484"],
+    "createdAt": "2024-01-15T10:30:00Z",
+    "updatedAt": "2024-01-20T14:22:00Z"
+  },
+  "Indexes": {
+    "EmailIndex": {
+      "Purpose": "Allow lookup by email address",
+      "Key": "email (Hash)"
+    }
+  },
+  "Notes": [
+    "userId is the Cognito sub UUID - this is the universal unique identifier",
+    "All course arrays store course codes as strings",
+    "university field can be null if not selected yet",
+    "createdAt/updatedAt should be ISO 8601 timestamps",
+    "Use conditional writes to prevent overwrites",
+    "Consider adding TTL for inactive users if needed"
+  ]
+}

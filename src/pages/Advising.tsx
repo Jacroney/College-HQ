@@ -122,7 +122,7 @@ const Advising: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // TODO: Replace with actual user authentication
-  const userId = 'test-user-123'; // This should come from your auth system
+  const userId = 'user_ufkkwtqhrzg'; // This should come from your auth system
   
   // Your API endpoint - UPDATE THIS WITH YOUR ACTUAL API URL
   const API_BASE_URL = 'https://lm8ngppg22.execute-api.us-east-1.amazonaws.com/dev';

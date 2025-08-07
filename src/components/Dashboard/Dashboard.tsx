@@ -1,380 +1,358 @@
-import { Box, Grid, Paper, Typography, IconButton, Tooltip, Skeleton, Alert, Avatar, Button } from '@mui/material';
+import { 
+  Box, 
+  Grid, 
+  Typography, 
+  IconButton, 
+  Tooltip, 
+  Skeleton, 
+  Alert, 
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  Divider,
+  alpha,
+  useTheme
+} from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   School as SchoolIcon,
   Assignment as AssignmentIcon,
-  Event as EventIcon,
   Psychology as PsychologyIcon,
-  Work as WorkIcon,
-  FitnessCenter as FitnessIcon,
   Refresh as RefreshIcon,
-  Person as PersonIcon,
+  TrendingUp as TrendingUpIcon,
+  Notifications as NotificationsIcon,
+  Bookmark as BookmarkIcon,
 } from '@mui/icons-material';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const DashboardContainer = styled(Box)(({ theme }) => ({
   padding: theme.spacing(3),
-  minHeight: '100vh',
-  background: theme.palette.surface.main,
+  minHeight: '100%',
+  background: theme.palette.background.default,
+  color: theme.palette.text.primary,
+  [theme.breakpoints.down('sm')]: {
+    padding: theme.spacing(2),
+  },
+  [theme.breakpoints.up('md')]: {
+    padding: theme.spacing(4),
+  },
 }));
 
 const PageHeader = styled(Box)(({ theme }) => ({
   marginBottom: theme.spacing(4),
   display: 'flex',
+  flexDirection: 'column',
   justifyContent: 'space-between',
-  alignItems: 'center',
+  alignItems: 'stretch',
+  gap: theme.spacing(2),
+  [theme.breakpoints.up('sm')]: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
 }));
 
+const PageTitle = styled(Typography)(({ theme }) => ({
+  fontWeight: 700,
+  background: theme.palette.mode === 'light' 
+    ? `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`
+    : theme.palette.primary.main,
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+  display: 'inline-block',
+  marginBottom: theme.spacing(1),
+}));
 
 const WidgetGrid = styled(Grid)(({ theme }) => ({
   marginBottom: theme.spacing(4),
 }));
 
-const Widget = styled(motion(Paper))(({ theme }) => ({
-  padding: theme.spacing(3),
+const Widget = styled(Card)(({ theme }) => ({
   height: '100%',
   display: 'flex',
   flexDirection: 'column',
-  background: theme.palette.surface.paper,
-  border: `1px solid ${theme.palette.divider}`,
-  transition: 'all 0.2s ease-in-out',
+  background: theme.palette.background.paper,
+  borderRadius: theme.shape.borderRadius * 2,
+  boxShadow: theme.shadows[1],
+  transition: theme.transitions.create(['transform', 'box-shadow'], {
+    duration: theme.transitions.duration.shorter,
+  }),
   '&:hover': {
     transform: 'translateY(-4px)',
     boxShadow: theme.shadows[4],
   },
-}));
-
-const WidgetHeader = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: theme.spacing(2),
-}));
-
-const WidgetTitle = styled(Typography)(({ theme }) => ({
-  color: theme.palette.text.primary,
-  fontWeight: 600,
-}));
-
-const WidgetContent = styled(Box)(({ theme }) => ({
-  flex: 1,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.spacing(2),
-}));
-
-const StatCard = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(2),
-  borderRadius: theme.shape.borderRadius,
-  background: theme.palette.surface.elevated,
-  display: 'flex',
-  alignItems: 'center',
-  gap: theme.spacing(2),
-  transition: 'all 0.2s ease-in-out',
-  '&:hover': {
-    background: theme.palette.action.hover,
+  '& .MuiCardHeader-root': {
+    padding: theme.spacing(2, 3, 1),
+    '& .MuiCardHeader-action': {
+      alignSelf: 'center',
+      margin: 0,
+    },
+  },
+  '& .MuiCardContent-root': {
+    padding: theme.spacing(0, 3, 3),
+    flexGrow: 1,
   },
 }));
-
-const StatValue = styled(Typography)(({ theme }) => ({
-  fontSize: '1.5rem',
-  fontWeight: 700,
-  color: theme.palette.text.primary,
-}));
-
-const StatLabel = styled(Typography)(({ theme }) => ({
-  color: theme.palette.text.secondary,
-  fontSize: '0.875rem',
-}));
-
-const ProfileWidget = styled(motion(Paper))(({ theme }) => ({
-  padding: theme.spacing(3),
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  background: theme.palette.surface.paper,
-  border: `1px solid ${theme.palette.divider}`,
-  transition: 'all 0.2s ease-in-out',
-  '&:hover': {
-    transform: 'translateY(-4px)',
-    boxShadow: theme.shadows[4],
-    cursor: 'pointer',
-  },
-}));
-
 
 interface WidgetData {
   id: number;
   title: string;
-  icon: JSX.Element;
-  content: JSX.Element;
+  icon: React.ReactNode;
+  content: React.ReactNode;
   loading?: boolean;
   error?: string;
 }
 
-
-// TODO: Replace with actual API calls to AWS backend
-const fetchWidgetData = async (widgetId: number): Promise<WidgetData> => {
-  // Remove setTimeout - this was just for demo
-  // await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  switch (widgetId) {
-    case 1:
-      // TODO: Fetch from /api/academic/overview
-      return {
-        id: 1,
-        title: 'Academic Overview',
-        icon: <SchoolIcon />,
-        content: (
-          <>
-            <StatCard>
-              <StatValue>-</StatValue>
-              <StatLabel>Current GPA</StatLabel>
-            </StatCard>
-            <StatCard>
-              <StatValue>-</StatValue>
-              <StatLabel>Credits This Semester</StatLabel>
-            </StatCard>
-            <StatCard>
-              <StatValue>-</StatValue>
-              <StatLabel>Active Courses</StatLabel>
-            </StatCard>
-          </>
-        ),
-      };
-    case 2:
-      // TODO: Fetch from /api/assignments/upcoming
-      return {
-        id: 2,
-        title: 'Upcoming Assignments',
-        icon: <AssignmentIcon />,
-        content: (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Typography variant="body2" color="text.secondary">
-              No assignments loaded. Connect to backend to view upcoming assignments.
-            </Typography>
-          </Box>
-        ),
-      };
-    case 3:
-      // TODO: Fetch from /api/schedule/today
-      return {
-        id: 3,
-        title: 'Today\'s Schedule',
-        icon: <EventIcon />,
-        content: (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Typography variant="body2" color="text.secondary">
-              No schedule loaded. Connect to backend to view today's events.
-            </Typography>
-          </Box>
-        ),
-      };
-    case 4:
-      // TODO: Fetch from /api/study/insights
-      return {
-        id: 4,
-        title: 'Study Insights',
-        icon: <PsychologyIcon />,
-        content: (
-          <>
-            <StatCard>
-              <StatValue>-</StatValue>
-              <StatLabel>Focus Score</StatLabel>
-            </StatCard>
-            <StatCard>
-              <StatValue>-</StatValue>
-              <StatLabel>Study Time This Week</StatLabel>
-            </StatCard>
-            <StatCard>
-              <StatValue>-</StatValue>
-              <StatLabel>Completed Tasks</StatLabel>
-            </StatCard>
-          </>
-        ),
-      };
-    case 5:
-      // TODO: Fetch from /api/career/goals
-      return {
-        id: 5,
-        title: 'Career Goals',
-        icon: <WorkIcon />,
-        content: (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Typography variant="body2" color="text.secondary">
-              No career goals loaded. Connect to backend to view your goals.
-            </Typography>
-          </Box>
-        ),
-      };
-    case 6:
-      // TODO: Remove wellness widget - not core functionality
-      return {
-        id: 6,
-        title: 'Wellness',
-        icon: <FitnessIcon />,
-        content: (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Typography variant="body2" color="text.secondary">
-              Wellness tracking will be implemented in a future version.
-            </Typography>
-          </Box>
-        ),
-      };
-    default:
-      throw new Error('Widget not found');
-  }
-};
+const createSampleData = (navigate: (path: string) => void, theme: any) => [
+    {
+      id: 1,
+      title: 'Upcoming Classes',
+      icon: <SchoolIcon />,
+      content: (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 80 }}>
+          <Typography variant="body2" color="text.secondary">
+            No data available
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      id: 2,
+      title: 'Assignments Due',
+      icon: <AssignmentIcon />,
+      content: (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 80 }}>
+          <Typography variant="body2" color="text.secondary">
+            No data available
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      id: 3,
+      title: 'Study Goals',
+      icon: <PsychologyIcon />,
+      content: (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 80 }}>
+          <Typography variant="body2" color="text.secondary">
+            No data available
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      id: 4,
+      title: 'AI Study Assistant',
+      icon: <PsychologyIcon />,
+      content: (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 80 }}>
+          <Typography variant="body2" color="text.secondary">
+            No data available
+          </Typography>
+        </Box>
+      ),
+    },
+];
 
 const Dashboard = () => {
+  const theme = useTheme();
   const navigate = useNavigate();
   const [widgets, setWidgets] = useState<WidgetData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadData = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 800));
+      const sampleData = createSampleData(navigate, theme);
+      setWidgets(sampleData);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [navigate, theme]);
 
   useEffect(() => {
-    const loadWidgets = async () => {
-      try {
-        setLoading(true);
-        const widgetIds = [1, 2, 3, 4, 5, 6];
-        const widgetData = await Promise.all(
-          widgetIds.map(id => fetchWidgetData(id))
-        );
-        setWidgets(widgetData);
-        setError(null);
-      } catch (err) {
-        setError('Failed to load dashboard data');
-        console.error('Error loading widgets:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    loadData();
+  }, [loadData]);
 
-    loadWidgets();
-  }, []);
-
-  const handleRefresh = () => {
-    setLoading(true);
-    const loadWidgets = async () => {
-      try {
-        const widgetIds = [1, 2, 3, 4, 5, 6];
-        const widgetData = await Promise.all(
-          widgetIds.map(id => fetchWidgetData(id))
-        );
-        setWidgets(widgetData);
-        setError(null);
-      } catch (err) {
-        setError('Failed to refresh dashboard data');
-        console.error('Error refreshing widgets:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadWidgets();
+  const handleRefresh = async () => {
+    if (refreshing) return;
+    await loadData();
   };
 
-  const handleWidgetClick = (widgetId: number) => {
-    switch (widgetId) {
-      case 1:
-        navigate('/academic');
-        break;
-      case 2:
-        navigate('/assignments');
-        break;
-      case 3:
-        navigate('/schedule');
-        break;
-      case 4:
-        navigate('/study-tools');
-        break;
-      case 5:
-        navigate('/career');
-        break;
-      case 6:
-        navigate('/wellness');
-        break;
-      default:
-        break;
-    }
-  };
+  if (loading) {
+    return (
+      <DashboardContainer>
+        <PageHeader>
+          <Box>
+            <PageTitle variant="h4" component="h1">
+              Dashboard
+            </PageTitle>
+            <Typography variant="body1" color="text.secondary">
+              Loading your personalized dashboard...
+            </Typography>
+          </Box>
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            disabled
+            sx={{ minWidth: 120 }}
+          >
+            Refreshing...
+          </Button>
+        </PageHeader>
+        <WidgetGrid container>
+          {[1, 2, 3, 4].map((item) => (
+            <Grid item xs={12} sm={6} md={6} lg={3} key={item}>
+              <Skeleton 
+                variant="rectangular" 
+                height={180} 
+                sx={{ 
+                  borderRadius: 3,
+                  bgcolor: theme.palette.mode === 'light' ? 'grey.100' : 'grey.900'
+                }} 
+              />
+            </Grid>
+          ))}
+        </WidgetGrid>
+      </DashboardContainer>
+    );
+  }
 
   return (
     <DashboardContainer>
       <PageHeader>
-        <Typography variant="h4" component="h1">
-          Dashboard
-        </Typography>
-        <Tooltip title="Refresh Dashboard">
-          <IconButton onClick={handleRefresh} disabled={loading}>
-            <RefreshIcon />
-          </IconButton>
-        </Tooltip>
+        <Box>
+          <Box 
+            component="h1"
+            sx={{
+              margin: 0,
+              background: theme.palette.mode === 'light' 
+                ? `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`
+                : theme.palette.primary.main,
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              fontSize: '2.125rem',
+              fontWeight: 700,
+              lineHeight: 1.2,
+              letterSpacing: '0.0075em',
+              display: 'inline-block',
+              mb: 1
+            }}
+          >
+            Welcome back, Student! 👋
+          </Box>
+          <Typography variant="body1" color="text.secondary">
+            Here's what's happening with your academics
+          </Typography>
+        </Box>
+        <Button
+          variant="outlined"
+          color="inherit"
+          startIcon={<RefreshIcon />}
+          onClick={handleRefresh}
+          disabled={refreshing}
+          sx={{ 
+            minWidth: 120,
+            borderColor: 'divider',
+            '&:hover': {
+              borderColor: 'text.secondary',
+              backgroundColor: theme.palette.mode === 'light' 
+                ? 'rgba(0, 0, 0, 0.04)' 
+                : 'rgba(255, 255, 255, 0.08)'
+            },
+          }}
+        >
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </Button>
       </PageHeader>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      )}
-
-      <AnimatePresence>
-        <WidgetGrid container spacing={3}>
-          {/* Profile Widget as first card */}
-          <Grid item xs={12} sm={6} md={4} key="profile-widget">
-            <ProfileWidget
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              onClick={() => navigate('/profile')}
-              whileHover={{ scale: 1.03 }}
-            >
-              <Avatar sx={{ width: 64, height: 64, mb: 2, bgcolor: 'primary.main' }}>
-                <PersonIcon fontSize="large" />
-              </Avatar>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                Student Profile
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2, textAlign: 'center' }}>
-                View and edit your personal and academic information
-              </Typography>
-              <Button variant="contained" color="primary" size="small" sx={{ mt: 1 }}>
-                Go to Profile
-              </Button>
-            </ProfileWidget>
-          </Grid>
-          {/* Render the rest of the widgets */}
-          {loading
-            ? Array.from(new Array(5)).map((_, index) => (
-                <Grid item xs={12} sm={6} md={4} key={index}>
-                  <Widget>
-                    <Skeleton variant="rectangular" height={200} />
-                  </Widget>
-                </Grid>
-              ))
-            : widgets.map((widget) => (
-                <Grid item xs={12} sm={6} md={4} key={widget.id}>
-                  <Widget
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                    onClick={() => handleWidgetClick(widget.id)}
-                  >
-                    <WidgetHeader>
-                      <WidgetTitle>
-                        {widget.icon} {widget.title}
-                      </WidgetTitle>
-                    </WidgetHeader>
-                    <WidgetContent>{widget.content}</WidgetContent>
-                  </Widget>
-                </Grid>
-              ))}
+      <AnimatePresence mode="wait">
+        <WidgetGrid container>
+          {widgets.map((widget) => (
+            <Grid item xs={12} sm={6} md={6} lg={3} key={widget.id}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ 
+                  opacity: 1, 
+                  y: 0,
+                  transition: { 
+                    duration: 0.4,
+                    ease: [0.4, 0, 0.2, 1]
+                  }
+                }}
+                whileHover={{ y: -4 }}
+              >
+                <Widget>
+                  <CardHeader
+                    title={
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Box sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 40,
+                          height: 40,
+                          borderRadius: '50%',
+                          bgcolor: alpha(theme.palette.primary.main, 0.1),
+                          color: theme.palette.primary.main,
+                          mr: 1.5,
+                        }}>
+                          {widget.icon}
+                        </Box>
+                        <Typography variant="subtitle1" fontWeight={600}>
+                          {widget.title}
+                        </Typography>
+                      </Box>
+                    }
+                    action={
+                      <Tooltip title="More options">
+                        <IconButton size="small" color="inherit">
+                          <NotificationsIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    }
+                    sx={{ 
+                      p: 2, 
+                      '& .MuiCardHeader-content': {
+                        overflow: 'hidden',
+                      },
+                      '& .MuiCardHeader-title': {
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      },
+                    }}
+                  />
+                  <Divider sx={{ mx: 3, my: 0 }} />
+                  <CardContent>
+                    {widget.error ? (
+                      <Alert severity="error" sx={{ mb: 2 }}>{widget.error}</Alert>
+                    ) : widget.loading ? (
+                      <Skeleton 
+                        variant="rectangular" 
+                        height={60} 
+                        sx={{ 
+                          borderRadius: 2,
+                          bgcolor: theme.palette.mode === 'light' ? 'grey.100' : 'grey.900'
+                        }} 
+                      />
+                    ) : (
+                      <Box sx={{ minHeight: 80, display: 'flex', flexDirection: 'column' }}>
+                        {widget.content}
+                      </Box>
+                    )}
+                  </CardContent>
+                </Widget>
+              </motion.div>
+            </Grid>
+          ))}
         </WidgetGrid>
       </AnimatePresence>
     </DashboardContainer>
