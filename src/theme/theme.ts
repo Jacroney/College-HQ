@@ -99,7 +99,7 @@ const ERROR = {
   contrastText: '#FFFFFF',
 };
 
-// Updated GREY palette to be warmer and lighter
+// Updated GREY palette with cream text and blue background
 const GREY = {
   0: '#FFFFFF',
   50: '#F8FBFF',   // Very light warm blue-tinted
@@ -112,6 +112,20 @@ const GREY = {
   700: '#4F5A6B',  // Darker warm grey
   800: '#2F3742',  // Very dark warm grey
   900: '#1A1F24',  // Almost black with warm tint
+};
+
+// Cream colors for text and sidebar elements - Brighter to match blue lightness
+const CREAM = {
+  50: '#FFFFF9',   // Very light bright yellow
+  100: '#FFFFF7',  // Light bright yellow
+  200: '#FFFEE8',  // Light bright yellow with warm tint
+  300: '#FFFDD4',  // Medium bright yellow
+  400: '#FFFCC0',  // Medium-dark bright yellow
+  500: '#FFFBA8',  // Neutral bright yellow
+  600: '#FFF08A',  // Dark bright yellow
+  700: '#FFE56B',  // Darker bright yellow
+  800: '#FFD93F',  // Very dark bright yellow
+  900: '#FFCC18',  // Almost black with bright yellow tint
 };
 
 // Base theme options
@@ -142,15 +156,15 @@ const baseTheme: ThemeOptions = {
       error: `linear-gradient(135deg, ${ERROR.main} 0%, ${ERROR.light} 100%)`,
     },
     background: {
-      default: GREY[100],   // 60% - Light warm blue background
+      default: GREY[100],   // 60% - Light soft cream background
       paper: '#FFFFFF',     // White cards
-      neutral: GREY[200],   // Light warm blue-grey
+      neutral: GREY[200],   // Light cream with warm tint
       paperInvert: GREY[900],
     },
     text: {
-      primary: GREY[900],
-      secondary: GREY[600],
-      disabled: GREY[400],
+      primary: '#2E4A6B',     // Dark blue for primary text
+      secondary: '#4A6B8A',   // Medium blue for secondary text
+      disabled: '#8BA3C7',    // Light blue for disabled text
     },
     divider: alpha(GREY[500], 0.12),
     action: {
@@ -171,7 +185,7 @@ const baseTheme: ThemeOptions = {
       fontSize: '3rem',
       lineHeight: 1.2,
       letterSpacing: '-0.02em',
-      color: GREY[900],
+      color: '#2E4A6B',
     },
     h2: {
       fontFamily: '"Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
@@ -179,28 +193,28 @@ const baseTheme: ThemeOptions = {
       fontSize: '2.25rem',
       lineHeight: 1.2,
       letterSpacing: '-0.01em',
-      color: GREY[900],
+      color: '#2E4A6B',
     },
     h3: {
       fontFamily: '"Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
       fontWeight: 700,
       fontSize: '1.75rem',
       lineHeight: 1.3,
-      color: GREY[900],
+      color: '#2E4A6B',
     },
     h4: {
       fontFamily: '"Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
       fontWeight: 700,
       fontSize: '1.5rem',
       lineHeight: 1.3,
-      color: GREY[900],
+      color: '#2E4A6B',
     },
     h5: {
       fontFamily: '"Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
       fontWeight: 700,
       fontSize: '1.25rem',
       lineHeight: 1.4,
-      color: GREY[900],
+      color: '#2E4A6B',
     },
     h6: {
       fontFamily: '"Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
@@ -215,7 +229,7 @@ const baseTheme: ThemeOptions = {
     caption: {
       fontSize: '0.75rem',
       lineHeight: 1.5,
-      color: GREY[600],
+      color: '#4A6B8A',
     },
     overline: {
       fontSize: '0.625rem',
@@ -223,7 +237,7 @@ const baseTheme: ThemeOptions = {
       letterSpacing: '0.5px',
       lineHeight: 1.5,
       textTransform: 'uppercase',
-      color: GREY[600],
+      color: '#4A6B8A',
     },
     subtitle1: {
       fontWeight: 600,

@@ -44,7 +44,7 @@ const StyledDrawer = styled(Drawer, {
   boxSizing: 'border-box',
   '& .MuiDrawer-paper': {
     background: theme.palette.mode === 'light' 
-      ? `linear-gradient(180deg, ${theme.palette.background.neutral} 0%, ${theme.palette.background.default} 100%)`
+      ? `linear-gradient(180deg, #FFFEE8 0%, #FFFFF7 100%)`
       : theme.palette.background.paper,
     borderRight: `1px solid ${theme.palette.divider}`,
     backdropFilter: 'blur(8px)',
