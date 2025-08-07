@@ -44,7 +44,7 @@ const StyledDrawer = styled(Drawer, {
   boxSizing: 'border-box',
   '& .MuiDrawer-paper': {
     background: theme.palette.mode === 'light' 
-      ? `linear-gradient(180deg, ${theme.palette.grey[50]} 0%, ${theme.palette.background.default} 100%)`
+      ? `linear-gradient(180deg, ${theme.palette.background.neutral} 0%, ${theme.palette.background.default} 100%)`
       : theme.palette.background.paper,
     borderRight: `1px solid ${theme.palette.divider}`,
     backdropFilter: 'blur(8px)',
@@ -128,11 +128,11 @@ const NavItem = styled(ListItem, {
     borderRadius: theme.shape.borderRadius * 2,
     padding: theme.spacing(1, 2),
     color: active ? theme.palette.primary.main : theme.palette.text.secondary,
-    backgroundColor: active ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
+    backgroundColor: active ? alpha(theme.palette.primary.main, 0.12) : 'transparent',
     '&:hover': {
       backgroundColor: active 
-        ? alpha(theme.palette.primary.main, 0.12) 
-        : theme.palette.action.hover,
+        ? alpha(theme.palette.primary.main, 0.16) 
+        : alpha(theme.palette.primary.light, 0.08),
     },
     '& .MuiListItemIcon-root': {
       color: active ? theme.palette.primary.main : theme.palette.text.secondary,
@@ -154,20 +154,25 @@ const StyledListItemButton = styled(ListItemButton)(({ theme }) => ({
   padding: theme.spacing(1.25, 2),
   transition: 'all 0.3s ease',
   '&.Mui-selected': {
-    background: 'linear-gradient(135deg, #2563EB, #7C3AED)',
+    background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
     color: theme.palette.primary.contrastText,
-    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+    boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
     '&:hover': {
-      background: 'linear-gradient(135deg, #1E40AF, #5B21B6)',
-      boxShadow: '0 6px 16px rgba(37, 99, 235, 0.4)',
+      background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark})`,
+      boxShadow: `0 6px 16px ${alpha(theme.palette.primary.main, 0.4)}`,
     },
     '& .MuiListItemIcon-root': {
       color: 'inherit',
     },
   },
   '&:hover': {
-    background: 'rgba(37, 99, 235, 0.08)',
-    transform: 'translateX(4px)',
+    background: alpha(theme.palette.primary.light, 0.08),
+    transform: 'translateX(2px)',
+  },
+  // Fix centering when collapsed
+  '& .MuiListItemIcon-root': {
+    minWidth: 'auto',
+    marginRight: 0,
   },
 }));
 
@@ -341,15 +346,32 @@ const Navigation: React.FC = () => {
                 <StyledListItemButton
                   selected={isActive(item.path)}
                   onClick={() => navigate(item.path)}
+                  sx={{
+                    justifyContent: isCollapsed ? 'center' : 'flex-start',
+                    minHeight: isCollapsed ? 48 : 'auto',
+                    px: isCollapsed ? 1 : 2,
+                  }}
                 >
-                  <ListItemIcon>{item.icon}</ListItemIcon>
+                  <ListItemIcon 
+                    sx={{ 
+                      minWidth: isCollapsed ? 'auto' : 40,
+                      display: 'flex',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
                   <ListItemText 
                     primary={item.text} 
                     primaryTypographyProps={{
                       variant: 'body2',
                       fontWeight: isActive(item.path) ? 600 : 400,
                     }}
-                    sx={{ opacity: isCollapsed ? 0 : 1, transition: 'opacity 0.2s' }}
+                    sx={{ 
+                      opacity: isCollapsed ? 0 : 1, 
+                      transition: 'opacity 0.2s',
+                      display: isCollapsed ? 'none' : 'block',
+                    }}
                   />
                 </StyledListItemButton>
               </Tooltip>
@@ -367,8 +389,20 @@ const Navigation: React.FC = () => {
         )}
         <NavItem disablePadding>
           <Tooltip title={isCollapsed ? 'Settings' : ''} placement="right">
-            <StyledListItemButton>
-              <ListItemIcon>
+            <StyledListItemButton
+              sx={{
+                justifyContent: isCollapsed ? 'center' : 'flex-start',
+                minHeight: isCollapsed ? 48 : 'auto',
+                px: isCollapsed ? 1 : 2,
+              }}
+            >
+              <ListItemIcon 
+                sx={{ 
+                  minWidth: isCollapsed ? 'auto' : 40,
+                  display: 'flex',
+                  justifyContent: 'center',
+                }}
+              >
                 <SettingsIcon fontSize="small" />
               </ListItemIcon>
               <ListItemText 
@@ -376,7 +410,11 @@ const Navigation: React.FC = () => {
                 primaryTypographyProps={{
                   variant: 'body2',
                 }}
-                sx={{ opacity: isCollapsed ? 0 : 1, transition: 'opacity 0.2s' }}
+                sx={{ 
+                  opacity: isCollapsed ? 0 : 1, 
+                  transition: 'opacity 0.2s',
+                  display: isCollapsed ? 'none' : 'block',
+                }}
               />
             </StyledListItemButton>
           </Tooltip>

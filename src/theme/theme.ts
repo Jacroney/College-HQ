@@ -42,61 +42,76 @@ declare module '@mui/material/styles' {
   }
 }
 
-// Color palette
+// 60-30-10 Color Palette - Lighter & Warmer
+// 60% - Primary background (warm light colors)
+// 30% - Secondary elements (warm medium colors)
+// 10% - Accent colors (warm bright colors)
+
+// Primary Colors (60% - Background) - Warmer & Lighter
 const PRIMARY = {
-  light: '#4cc9f0',
-  main: '#4361ee',
-  dark: '#3a0ca3',
-  contrastText: '#ffffff',
+  light: '#F0F8FF', // Very light warm blue
+  main: '#7BB3FF',  // Warm sky blue
+  dark: '#5A9BFF',  // Deeper warm blue
+  contrastText: '#FFFFFF',
 };
 
+// Secondary Colors (30% - Sidebars, Cards) - Warmer & Lighter
 const SECONDARY = {
-  light: '#b5179e',
-  main: '#7209b7',
-  dark: '#560bad',
-  contrastText: '#ffffff',
+  light: '#F5F9FF', // Very light warm blue-grey
+  main: '#8BB8E8',  // Warm medium blue
+  dark: '#6B9BC8',  // Warmer medium blue
+  contrastText: '#FFFFFF',
+};
+
+// Accent Colors (10% - Buttons, Highlights) - Warmer & Brighter
+const ACCENT = {
+  light: '#FFE8D6', // Soft warm coral
+  main: '#FF8A65',  // Warm coral
+  dark: '#FF7043',  // Deeper warm coral
+  contrastText: '#FFFFFF',
 };
 
 const INFO = {
-  light: '#80e3ff',
-  main: '#4cc9f0',
-  dark: '#3a86ff',
-  contrastText: '#ffffff',
+  light: '#E3F2FD',
+  main: '#64B5F6', // Warmer blue
+  dark: '#42A5F5',
+  contrastText: '#FFFFFF',
 };
 
 const SUCCESS = {
-  light: '#80ffb3',
-  main: '#2ecc71',
-  dark: '#27ae60',
-  contrastText: '#ffffff',
+  light: '#E8F5E8',
+  main: '#81C784', // Warmer green
+  dark: '#66BB6A',
+  contrastText: '#FFFFFF',
 };
 
 const WARNING = {
-  light: '#ffd54f',
-  main: '#ffbe0b',
-  dark: '#fb8500',
+  light: '#FFF8E1',
+  main: '#FFB74D', // Warmer orange
+  dark: '#FFA726',
   contrastText: '#212121',
 };
 
 const ERROR = {
-  light: '#ff70a6',
-  main: '#f72585',
-  dark: '#d00069',
-  contrastText: '#ffffff',
+  light: '#FFEBEE',
+  main: '#E57373', // Warmer red
+  dark: '#EF5350',
+  contrastText: '#FFFFFF',
 };
 
+// Updated GREY palette to be warmer and lighter
 const GREY = {
   0: '#FFFFFF',
-  50: '#F8F9FF',
-  100: '#F1F3F9',
-  200: '#E2E6F3',
-  300: '#D1D5E0',
-  400: '#9EA4B1',
-  500: '#6B7280',
-  600: '#4B5563',
-  700: '#374151',
-  800: '#1F2937',
-  900: '#111827',
+  50: '#F8FBFF',   // Very light warm blue-tinted
+  100: '#F0F7FF',  // Light warm blue-grey
+  200: '#E5F0FF',  // Light grey with warm blue tint
+  300: '#D1E3FF',  // Medium warm grey
+  400: '#B8D1F0',  // Medium-dark warm grey
+  500: '#8BA3C7',  // Neutral warm grey
+  600: '#6B7A94',  // Dark warm grey
+  700: '#4F5A6B',  // Darker warm grey
+  800: '#2F3742',  // Very dark warm grey
+  900: '#1A1F24',  // Almost black with warm tint
 };
 
 // Base theme options
@@ -127,9 +142,9 @@ const baseTheme: ThemeOptions = {
       error: `linear-gradient(135deg, ${ERROR.main} 0%, ${ERROR.light} 100%)`,
     },
     background: {
-      default: GREY[50],
-      paper: '#FFFFFF',
-      neutral: GREY[100],
+      default: GREY[100],   // 60% - Light warm blue background
+      paper: '#FFFFFF',     // White cards
+      neutral: GREY[200],   // Light warm blue-grey
       paperInvert: GREY[900],
     },
     text: {
@@ -139,11 +154,11 @@ const baseTheme: ThemeOptions = {
     },
     divider: alpha(GREY[500], 0.12),
     action: {
-      hover: alpha(GREY[500], 0.08),
-      selected: alpha(GREY[500], 0.16),
+      hover: alpha(PRIMARY.main, 0.08),
+      selected: alpha(PRIMARY.main, 0.16),
       disabled: alpha(GREY[500], 0.4),
       disabledBackground: alpha(GREY[500], 0.12),
-      focus: alpha(GREY[500], 0.2),
+      focus: alpha(PRIMARY.main, 0.2),
       hoverOpacity: 0.08,
       disabledOpacity: 0.4,
     },
