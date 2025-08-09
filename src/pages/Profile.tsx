@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useProfileContext } from '../context/ProfileContext';
 import { useAuth } from '../contexts/AuthContext';
-import { authApi } from '../services/api';
+import { profileApi } from '../services/api';
 import {
   Box,
   Paper,
@@ -47,58 +47,7 @@ import {
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 
-// --- Enhanced Types ---
-export interface University {
-  name: string;
-  domain: string;
-  country: string;
-}
-
-export interface Course {
-  university_course_id: string;
-  course_code: string;
-  course_name: string;
-  units: number;
-  description: string;
-  prerequisites: string[];
-  difficulty_level: string;
-  required_for_majors: string[];
-}
-
-export interface StudentProfile {
-  firstName: string;
-  lastName: string;
-  email: string;
-  studentId: string;
-  university: University | null;
-  college: string;
-  major: string;
-  concentration: string;
-  minor: string;
-  academicYear: string;
-  expectedGraduation: string;
-  gpa: number;
-  totalCredits: number;
-  currentSemesterCredits: number;
-  careerGoals: string[];
-  learningStyle: string;
-  academicInterests: string[];
-  advisorName: string;
-  advisorEmail: string;
-  advisorNotes: string;
-  // Enhanced course tracking
-  completedCourses: string[];
-  currentCourses: string[];
-  plannedCourses: string[];
-}
-
-export interface DegreeProgress {
-  totalRequired: number;
-  completed: number;
-  inProgress: number;
-  remaining: number;
-  percentComplete: number;
-}
+import { University, Course, StudentProfile, DegreeProgress } from '../types';
 
 // ====================================
 // STYLED COMPONENTS
@@ -174,13 +123,11 @@ const ProfileAvatar = styled(Box)(({ theme }) => ({
   },
 }));
 
-/**
- * Paper component for individual profile sections
- */
+// Remove unused styled components and fix dependencies
 const SectionPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
   marginBottom: theme.spacing(3),
-  background: theme.palette.background.paper, // fixed: removed theme.palette.surface
+  background: theme.palette.background.paper,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: theme.spacing(2),
   boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)',
@@ -191,9 +138,6 @@ const SectionPaper = styled(Paper)(({ theme }) => ({
   },
 }));
 
-/**
- * Header styling for each profile section
- */
 const SectionHeader = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
@@ -211,9 +155,6 @@ const CourseChecklistItem = styled(ListItem)(({ theme }) => ({
   },
 }));
 
-/**
- * Progress card with gradient background
- */
 const ProgressCard = styled(Card)(({ theme }) => ({
   background: `linear-gradient(135deg, ${theme.palette.success.main}08, ${theme.palette.info.main}08)`,
   border: `1px solid ${theme.palette.success.main}30`,
@@ -252,11 +193,13 @@ const StatCard = styled(Box)(({ theme }) => ({
   },
 }));
 
+import { env } from '../config/env';
+
 // --- API Functions ---
-const API_BASE_URL = 'https://lm8ngppg22.execute-api.us-east-1.amazonaws.com/dev';
+const API_BASE_URL = env.apiUrl;
 
 // Get current user ID from Cognito (sub is the universal unique identifier)
-function getCurrentUserId(user: any): string {
+function getCurrentUserId(user: any): string | null {
   // Use Cognito's sub (subject) as the unique user ID - this is the standard approach
   if (user?.attributes?.sub) {
     return user.attributes.sub;
@@ -381,7 +324,7 @@ async function loadConcentrationsForMajor(major: string): Promise<string[]> {
 // --- Main Component ---
 const Profile: React.FC = () => {
   const { state: profileState, updateProfile, dispatch } = useProfileContext();
-  const { user, updateUserProfile, signIn } = useAuth();
+  const { user } = useAuth();
   
   // Local state for form
   const [loading, setLoading] = useState(true);
@@ -394,7 +337,34 @@ const Profile: React.FC = () => {
   const [availableMajors, setAvailableMajors] = useState<string[]>([]);
   const [availableConcentrations, setAvailableConcentrations] = useState<string[]>([]);
   const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
-  const [degreeProgress, setDegreeProgress] = useState<DegreeProgress | null>(null);
+
+  // Load university-specific data when university changes
+  const loadUniversityData = useCallback(async (universityName: string, major?: string) => {
+    try {
+      const majorsData = await loadMajorsForUniversity(universityName);
+      setAvailableMajors(majorsData);
+      
+      // Only load courses if we have a major
+      if (major) {
+        const coursesData = await loadCoursesForUniversity(universityName, major, user);
+        setAvailableCourses(coursesData);
+      } else {
+        setAvailableCourses([]);
+      }
+    } catch (error) {
+      console.error('Error loading university data:', error);
+    }
+  }, [user]);
+
+  // Load concentrations when major changes
+  const loadConcentrationData = useCallback(async (major: string) => {
+    try {
+      const concentrations = await loadConcentrationsForMajor(major);
+      setAvailableConcentrations(concentrations);
+    } catch (error) {
+      console.error('Error loading concentrations:', error);
+    }
+  }, []);
 
   // Load initial data
   useEffect(() => {
@@ -412,7 +382,7 @@ const Profile: React.FC = () => {
         if (profileData.university) {
           await loadUniversityData(profileData.university.name, profileData.major);
         }
-      } catch (err) {
+      } catch (error) {
         setError('Failed to load profile data');
       } finally {
         setLoading(false);
@@ -425,35 +395,7 @@ const Profile: React.FC = () => {
     } else {
       setLoading(false);
     }
-  }, [user]); // Re-run when user changes
-
-  // Load university-specific data when university changes
-  const loadUniversityData = async (universityName: string, major?: string) => {
-    try {
-      const majorsData = await loadMajorsForUniversity(universityName);
-      setAvailableMajors(majorsData);
-      
-      // Only load courses if we have a major
-      if (major) {
-        const coursesData = await loadCoursesForUniversity(universityName, major, user);
-        setAvailableCourses(coursesData);
-      } else {
-        setAvailableCourses([]);
-      }
-    } catch (err) {
-      console.error('Error loading university data:', err);
-    }
-  };
-
-  // Load concentrations when major changes
-  const loadConcentrationData = async (major: string) => {
-    try {
-      const concentrations = await loadConcentrationsForMajor(major);
-      setAvailableConcentrations(concentrations);
-    } catch (err) {
-      console.error('Error loading concentrations:', err);
-    }
-  };
+  }, [user, dispatch, loadUniversityData]); // Added loadUniversityData to dependencies
 
   // Calculate degree progress
   const calculateDegreeProgress = (): DegreeProgress => {
@@ -464,7 +406,7 @@ const Profile: React.FC = () => {
     const requiredCourses = availableCourses.filter(course => 
       course.required_for_majors.includes(profileState.profile!.major)
     );
-    2
+    
     const totalRequired = requiredCourses.length;
     const completed = profileState.profile!.completedCourses.length;
     const inProgress = profileState.profile!.currentCourses.length;
@@ -1054,8 +996,10 @@ async function loadProfile(user: any): Promise<StudentProfile> {
     }
 
     // Try to get existing profile from API
-    const profile = await authApi.getProfile();
-    return profile.data;
+    const userId = user?.attributes?.sub || user?.username;
+    if (!userId) throw new Error('User not authenticated');
+    const profileResponse = await profileApi.getProfile(userId);
+    return profileResponse.data.profile as unknown as StudentProfile;
   } catch (error: any) {
     console.error('Error loading profile:', error);
     
@@ -1076,7 +1020,9 @@ async function saveProfile(profile: StudentProfile, user: any): Promise<void> {
       throw new Error('User not authenticated');
     }
 
-    await authApi.updateProfile(profile);
+    const userId = user?.attributes?.sub || user?.username;
+    if (!userId) throw new Error('User not authenticated');
+    await profileApi.updateProfile(userId, profile);
     console.log('Profile saved successfully');
   } catch (error) {
     console.error('Error saving profile:', error);
@@ -1090,7 +1036,9 @@ async function createInitialProfile(user: any): Promise<StudentProfile> {
     const initialProfile = createDefaultProfile(user);
     
     // Create profile in backend
-    await authApi.createProfile({
+    const userId = user?.attributes?.sub || user?.username;
+    if (!userId) throw new Error('User not authenticated');
+    await profileApi.createProfile(userId, {
       email: initialProfile.email,
       name: `${initialProfile.firstName} ${initialProfile.lastName}`.trim() || 'Student'
     });
@@ -1101,7 +1049,6 @@ async function createInitialProfile(user: any): Promise<StudentProfile> {
     return createDefaultProfile(user);
   }
 }
-
 
 /**
  * Create a default profile with Cognito user data as starting point

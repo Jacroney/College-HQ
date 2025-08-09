@@ -1,0 +1,15 @@
+{
+  "name": "advising-service",
+  "version": "1.0.0",
+  "description": "AI academic advising service using Amazon Bedrock",
+  "main": "index.js",
+  "scripts": {
+    "test": "node index.js",
+    "deploy": "zip -r advising-service.zip . -x 'node_modules/*' '*.zip' && aws lambda update-function-code --function-name college-hq-advising-service --zip-file fileb://advising-service.zip"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.500.0",
+    "@aws-sdk/client-lambda": "^3.500.0",
+    "dotenv": "^16.4.5"
+  }
+} 

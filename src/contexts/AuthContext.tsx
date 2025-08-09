@@ -1,20 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { signInWithRedirect, signOut, getCurrentUser, fetchUserAttributes, updateUserAttributes } from 'aws-amplify/auth';
-
-interface User {
-  username: string;
-  email?: string;
-  attributes?: any;
-}
-
-interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-  signIn: () => Promise<void>;
-  signOut: () => Promise<void>;
-  checkAuth: () => Promise<void>;
-  updateUserProfile: (attributes: Record<string, string>) => Promise<void>;
-}
+import { AuthUser, UserAttributes, AuthContextType } from '../types';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -27,7 +13,7 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   const checkAuth = async () => {
@@ -36,31 +22,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const currentUser = await getCurrentUser();
       
       // Try to get attributes, but don't fail if it doesn't work
-      let attributes = {};
+      let attributes: UserAttributes = {};
       try {
         attributes = await fetchUserAttributes();
       } catch (attrError) {
-        console.warn('Could not fetch user attributes:', attrError);
+        // Silently handle attribute fetch errors - this is expected with some OAuth configurations
         // Use basic info from currentUser if attributes fail
         attributes = {
           sub: currentUser.userId || currentUser.username,
-          email: currentUser.attributes?.email || ''
+          email: ''
         };
       }
       
       const userData = {
         username: currentUser.username,
-        email: attributes.email || currentUser.attributes?.email || '',
+        email: attributes.email || '',
         attributes: {
           ...attributes,
           sub: currentUser.userId || currentUser.username
         }
       };
       
-      console.log('✅ User authenticated:', userData);
       setUser(userData);
     } catch (error) {
-      console.error('Auth check failed:', error);
+      // Auth check failed - user not authenticated
       setUser(null);
     } finally {
       setLoading(false);
@@ -74,8 +59,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const urlHash = new URLSearchParams(window.location.hash.substring(1));
       
       if (urlParams.has('code') || urlHash.has('access_token')) {
-        console.log('🔄 Detected OAuth callback, processing...');
-        
         try {
           // Give Amplify time to process the callback
           await new Promise(resolve => setTimeout(resolve, 1000));
@@ -86,7 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Check auth status
           await checkAuth();
         } catch (error) {
-          console.error('❌ Error processing OAuth callback:', error);
+          // Error processing OAuth callback
         }
       } else {
         // Normal auth check
@@ -99,21 +82,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const handleSignIn = async () => {
     try {
-      console.log('🔄 Sign-in button clicked - checking auth state...');
-      
       // Check if user is already authenticated
       const currentUser = await getCurrentUser().catch(() => null);
       if (currentUser) {
-        console.log('✅ User already authenticated:', currentUser.username);
         await checkAuth(); // Refresh user data
         return;
       }
       
-      console.log('🚀 No user found, redirecting to Cognito...');
       await signInWithRedirect();
-      console.log('✅ Redirect initiated');
     } catch (error) {
-      console.error('❌ Error signing in:', error);
       throw error;
     }
   };
@@ -123,7 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await signOut();
       setUser(null);
     } catch (error) {
-      console.error('Error signing out:', error);
+      // Error signing out
       throw error;
     }
   };
@@ -133,7 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await updateUserAttributes({ userAttributes: attributes });
       await checkAuth(); // Refresh user data
     } catch (error) {
-      console.error('Error updating user attributes:', error);
+      // Error updating user attributes
       throw error;
     }
   };

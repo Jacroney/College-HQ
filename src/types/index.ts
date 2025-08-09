@@ -1,3 +1,9 @@
+// Re-export all types from specific type files
+export * from './auth.types';
+export * from './profile.types';
+export * from './schedule.types';
+
+// Dashboard and Widget types
 export interface Widget {
   id: string;
   title: string;
@@ -6,18 +12,7 @@ export interface Widget {
   type: 'academic' | 'social' | 'study' | 'decision' | 'ai';
 }
 
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-  academicStatus: {
-    gpa: number;
-    major: string;
-    year: number;
-  };
-}
-
+// Study group types
 export interface StudyGroup {
   id: string;
   name: string;
@@ -36,24 +31,20 @@ export interface StudyGroup {
   }[];
 }
 
-export interface Event {
+// User type for general app usage (different from AuthUser)
+export interface User {
   id: string;
-  title: string;
-  description: string;
-  type: 'social' | 'academic' | 'study';
-  startTime: Date;
-  endTime: Date;
-  location: string;
-  attendees: User[];
-  capacity: number;
-  resources?: {
-    id: string;
-    name: string;
-    type: 'item' | 'service';
-    quantity: number;
-  }[];
+  name: string;
+  email: string;
+  avatar?: string;
+  academicStatus: {
+    gpa: number;
+    major: string;
+    year: number;
+  };
 }
 
+// Goal tracking types
 export interface Goal {
   id: string;
   title: string;
@@ -69,6 +60,7 @@ export interface Goal {
   }[];
 }
 
+// UI state types
 export interface CursorState {
   type: 'default' | 'hover' | 'active' | 'drag';
   position: {

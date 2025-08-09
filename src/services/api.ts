@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { fetchAuthSession, signOut } from 'aws-amplify/auth';
+import { env } from '../config/env';
 
 // Get the current user's ID token from Cognito
 const getAuthToken = async () => {
@@ -7,7 +8,7 @@ const getAuthToken = async () => {
     const session = await fetchAuthSession();
     return session.tokens?.idToken?.toString() || null;
   } catch (error) {
-    console.error('Error fetching auth token:', error);
+    // Error fetching auth token
     return null;
   }
 };
@@ -16,19 +17,18 @@ const clearAuthToken = async () => {
   try {
     await signOut();
   } catch (error) {
-    console.error('Error clearing auth session:', error);
+    // Error clearing auth session
   }
 };
 
-// Use your actual AWS API Gateway URL
-const API_URL = import.meta.env.VITE_API_URL || 'https://lm8ngppg22.execute-api.us-east-1.amazonaws.com/dev';
+// Use API URL from environment configuration
+const API_URL = env.apiUrl;
 
 const api: AxiosInstance = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true,
 });
 
 // Request interceptor to add auth token
@@ -83,14 +83,15 @@ api.interceptors.response.use(
   }
 );
 
-export interface User {
+// API-specific types that differ from the main app types
+export interface ApiUser {
   id: string;
   email: string;
   name: string;
   role: string;
 }
 
-export interface Course {
+export interface ApiCourse {
   id: string;
   code: string;
   name: string;
@@ -99,43 +100,65 @@ export interface Course {
   department: string;
 }
 
-export interface Event {
+export interface ApiEvent {
   id: string;
   title: string;
   description?: string;
-  start: string;
-  end: string;
+  start: string; // ISO string from API
+  end: string; // ISO string from API
   type: 'class' | 'study' | 'personal' | 'other';
   location?: string;
   courseId?: string;
 }
 
-// Auth API - These endpoints should be implemented in your API Gateway/Lambda
-export const authApi = {
-  // Get user profile from your backend (using Cognito ID token for auth)
-  getProfile: () => api.get<User>('/api/users/me'),
-  updateProfile: (userData: Partial<User>) => api.put<User>('/api/users/me', userData),
-  // Create user profile in backend after Cognito signup
-  createProfile: (userData: { email: string; name: string }) => 
-    api.post<User>('/api/users/profile', userData),
+// Profile API - Updated for new profile-service
+export const profileApi = {
+  // Get user profile (userId from JWT token in backend)
+  getProfile: (userId: string) => api.get<{profile: ApiUser}>(`/profile/${userId}`),
+  updateProfile: (userId: string, userData: Partial<ApiUser>) => 
+    api.put<{profile: ApiUser}>(`/profile/${userId}`, userData),
+  // Create user profile 
+  createProfile: (userId: string, userData: Partial<ApiUser>) => 
+    api.post<{profile: ApiUser}>(`/profile/${userId}`, userData),
+  deleteProfile: (userId: string) => api.delete(`/profile/${userId}`),
 };
 
-// Courses API
+// Courses API - Updated for new course-service
 export const coursesApi = {
-  getAll: () => api.get<Course[]>('/api/courses'),
-  getById: (id: string) => api.get<Course>(`/api/courses/${id}`),
-  create: (courseData: Omit<Course, 'id'>) => api.post<Course>('/api/courses', courseData),
-  update: (id: string, courseData: Partial<Course>) => api.put<Course>(`/api/courses/${id}`, courseData),
-  delete: (id: string) => api.delete(`/api/courses/${id}`),
+  // Get courses with filters
+  getAll: (params?: {
+    university?: string;
+    major?: string; 
+    department?: string;
+    limit?: number;
+  }) => api.get<{courses: ApiCourse[]}>('/courses', { params }),
+  
+  // Get specific course
+  getById: (courseId: string) => api.get<ApiCourse>(`/courses/${courseId}`),
+  
+  // Search courses with context
+  search: (searchParams: {
+    university: string;
+    message?: string;
+    studentProfile?: any;
+  }) => api.post<{courses: ApiCourse[]; degreeRequirements: any}>('/courses/search', searchParams),
+  
+  // Get degree requirements
+  getDegreeRequirements: (majorId: string) => 
+    api.get<any>(`/degree-requirements/${majorId}`),
+  
+  // Get course flowchart
+  getFlowchart: (majorId: string, params?: {year?: string}) => 
+    api.get<any>(`/flowchart/${majorId}`, { params }),
 };
 
 // Calendar/Events API
 export const eventsApi = {
-  getAll: () => api.get<Event[]>('/api/events'),
+  getAll: () => api.get<ApiEvent[]>('/api/events'),
   getByDateRange: (start: string, end: string) =>
-    api.get<Event[]>('/api/events', { params: { start, end } }),
-  create: (eventData: Omit<Event, 'id'>) => api.post<Event>('/api/events', eventData),
-  update: (id: string, eventData: Partial<Event>) => api.put<Event>(`/api/events/${id}`, eventData),
+    api.get<ApiEvent[]>('/api/events', { params: { start, end } }),
+  create: (eventData: Omit<ApiEvent, 'id'>) => api.post<ApiEvent>('/api/events', eventData),
+  update: (id: string, eventData: Partial<ApiEvent>) => api.put<ApiEvent>(`/api/events/${id}`, eventData),
   delete: (id: string) => api.delete(`/api/events/${id}`),
 };
 
@@ -157,13 +180,65 @@ export const dashboardApi = {
   getCareerGoals: () => api.get('/api/dashboard/career-goals'),
 };
 
-// College planning API
+// Advising API - Updated for new advising-service
+export const advisingApi = {
+  // Send message to AI advisor
+  sendMessage: (data: {
+    userId: string;
+    message: string;
+    conversationId?: string;
+  }) => api.post<{
+    agent: string;
+    userId: string;
+    conversationId: string;
+    response: string;
+    timestamp: string;
+    profileUsed: boolean;
+    coursesReferenced: number;
+    degreeRequirementsUsed: boolean;
+    studentMajor: string;
+    studentYear: string;
+    university: string;
+  }>('/advising', data),
+};
+
+// Conversation API - New conversation-service
+export const conversationApi = {
+  // Create new conversation
+  createConversation: (data: {
+    userId: string;
+    title?: string;
+    agentType?: string;
+  }) => api.post<{conversation: any}>('/conversations', data),
+  
+  // Get specific conversation
+  getConversation: (userId: string, conversationId: string) => 
+    api.get<any>(`/conversations/${userId}/${conversationId}`),
+  
+  // List all conversations for user
+  listConversations: (userId: string) => 
+    api.get<{conversations: any[]; count: number}>(`/conversations/${userId}`),
+  
+  // Delete conversation
+  deleteConversation: (userId: string, conversationId: string) => 
+    api.delete(`/conversations/${userId}/${conversationId}`),
+  
+  // Store message in conversation
+  storeMessage: (data: {
+    userId: string;
+    conversationId: string;
+    userMessage?: string;
+    assistantResponse?: string;
+  }) => api.post('/conversations/message', data),
+};
+
+// College planning API - Deprecated, use coursesApi instead
 export const planningApi = {
-  getDegreeRequirements: () => api.get('/api/planning/degree-requirements'),
-  getCourseCatalog: () => api.get('/api/planning/course-catalog'),
-  checkPrerequisites: (courseId: string) => api.get(`/api/planning/prerequisites/${courseId}`),
-  getGraduationPlan: () => api.get('/api/planning/graduation-plan'),
-  saveGraduationPlan: (plan: object) => api.post('/api/planning/graduation-plan', plan),
+  getDegreeRequirements: (majorId: string) => coursesApi.getDegreeRequirements(majorId),
+  getCourseCatalog: (params?: any) => coursesApi.getAll(params),
+  checkPrerequisites: (courseId: string) => coursesApi.getById(courseId),
+  getGraduationPlan: (majorId: string) => coursesApi.getFlowchart(majorId),
+  saveGraduationPlan: (plan: object) => api.post('/planning/graduation-plan', plan),
 };
 
 export default api;

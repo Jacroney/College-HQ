@@ -1,13 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
-  Paper,
   Typography,
   IconButton,
   Button,
   ButtonGroup,
-  Card,
-  CardContent,
   Chip,
   Dialog,
   DialogTitle,
@@ -19,12 +16,9 @@ import {
   Select,
   MenuItem,
   Grid,
-  Badge,
-  Tooltip,
+  Alert,
   useTheme,
   alpha,
-  Alert,
-  Divider,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import {
@@ -32,10 +26,6 @@ import {
   ChevronRight,
   Today,
   Add as AddIcon,
-  Event as EventIcon,
-  Assignment as AssignmentIcon,
-  School as SchoolIcon,
-  AccessTime as TimeIcon,
   CalendarViewMonth,
   CalendarViewWeek,
   CalendarViewDay,
@@ -47,22 +37,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useProfileContext } from '../context/ProfileContext';
 
-// Types and Interfaces
-export interface CalendarEvent {
-  id: string;
-  title: string;
-  description?: string;
-  start: Date;
-  end: Date;
-  type: 'class' | 'assignment' | 'exam' | 'meeting' | 'personal';
-  color?: string;
-  location?: string;
-  course?: string;
-  recurring?: boolean;
-  allDay?: boolean;
-}
-
-export type ViewType = 'month' | 'week' | 'day';
+import { CalendarEvent, ViewType } from '../types';
 
 // Styled Components
 const CalendarContainer = styled(Box)(({ theme }) => ({
@@ -434,7 +409,6 @@ const Schedule: React.FC = () => {
   // Render Month View
   const renderMonthView = () => {
     const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-    const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
     const startDate = new Date(startOfMonth);
     startDate.setDate(startDate.getDate() - startOfMonth.getDay());
     

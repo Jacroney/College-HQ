@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { advisingApi } from '../services/api';
 import {
   Box,
   Paper,
@@ -105,12 +107,18 @@ interface Message {
   timestamp: string;
 }
 
-interface ApiResponse {
+interface AdvisingResponse {
   agent: string;
   userId: string;
   conversationId: string;
   response: string;
   timestamp: string;
+  profileUsed: boolean;
+  coursesReferenced: number;
+  degreeRequirementsUsed: boolean;
+  studentMajor: string;
+  studentYear: string;
+  university: string;
 }
 
 const Advising: React.FC = () => {
@@ -119,13 +127,12 @@ const Advising: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [advisingInfo, setAdvisingInfo] = useState<Partial<AdvisingResponse> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // TODO: Replace with actual user authentication
-  const userId = 'user_ufkkwtqhrzg'; // This should come from your auth system
   
-  // Your API endpoint - UPDATE THIS WITH YOUR ACTUAL API URL
-  const API_BASE_URL = 'https://lm8ngppg22.execute-api.us-east-1.amazonaws.com/dev';
+  // Get authenticated user
+  const { user } = useAuth();
+  const userId = user?.attributes?.sub || user?.username;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -135,33 +142,19 @@ const Advising: React.FC = () => {
     scrollToBottom();
   }, [messages]);
 
-  const callAdvisingAgent = async (message: string): Promise<ApiResponse> => {
-    const requestBody = {
+  const callAdvisingAgent = async (message: string): Promise<AdvisingResponse> => {
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
+    const requestData = {
       userId,
       message,
       ...(conversationId && { conversationId })
     };
 
-    const response = await fetch(`${API_BASE_URL}/advising`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    // Handle both direct response and wrapped response
-    if (data.body) {
-      return JSON.parse(data.body);
-    }
-    return data;
+    const response = await advisingApi.sendMessage(requestData);
+    return response.data;
   };
 
   const handleSendMessage = async () => {
@@ -186,6 +179,16 @@ const Advising: React.FC = () => {
       if (!conversationId) {
         setConversationId(response.conversationId);
       }
+
+      // Store advising info for display
+      setAdvisingInfo({
+        profileUsed: response.profileUsed,
+        coursesReferenced: response.coursesReferenced,
+        degreeRequirementsUsed: response.degreeRequirementsUsed,
+        studentMajor: response.studentMajor,
+        studentYear: response.studentYear,
+        university: response.university
+      });
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),

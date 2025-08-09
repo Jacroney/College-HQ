@@ -22,13 +22,21 @@ A modern, AI-powered academic dashboard for college students, featuring a simple
 - Advising chat page with real-time API integration
 - Minimalist: Only Dashboard, Advising, and Navigation components/pages remain
 
-### Backend (AWS Lambda)
+### Backend (AWS Microservices)
 
-- Node.js Lambda function (`advising-agent`)
-- Amazon Bedrock (Claude 3 Sonnet) for LLM responses
-- AWS DynamoDB for user profiles and conversation history
-- REST API (POST /advising) for agent interaction
-- Environment variables for configuration
+**5 Separate Lambda Functions:**
+- **auth-handler**: JWT validation and authorization (128 MB)
+- **profile-service**: User profile CRUD operations (256 MB)
+- **advising-service**: AI advisor using Amazon Bedrock Claude 3 Sonnet (512 MB)
+- **course-service**: Course catalog, degree requirements, flowcharts (256 MB)
+- **conversation-service**: Chat history and conversation management (256 MB)
+
+**Infrastructure:**
+- AWS API Gateway for routing requests to appropriate services
+- Amazon Bedrock (Claude 3 Sonnet) for AI responses
+- AWS DynamoDB for data persistence (users, conversations, courses)
+- AWS Cognito for authentication
+- Service-to-service communication via Lambda invoke
 
 ---
 
@@ -69,24 +77,50 @@ src/
 - **Advising**: Chat interface for the advising agent
 - **Navigation**: Sidebar with links to Dashboard and Advising
 
-### Backend Setup (AWS Lambda Advising Agent)
+### Backend Setup (AWS Lambda Functions)
 
-1. Go to `advising-agent/` directory:
+1. **Deploy Lambda Functions:**
    ```bash
-   cd advising-agent
+   cd lambda-functions
+   
+   # Option 1: Deploy all functions at once
+   ./deploy-all.sh
+   
+   # Option 2: Deploy individually
+   cd profile-service
    npm install
+   npm run deploy
    ```
-2. Configure AWS credentials (via environment, `.env`, or `~/.aws/credentials`)
-3. Deploy as a Lambda function (Node.js 18.x runtime recommended)
-4. Set environment variables:
-   - `AWS_REGION` (default: `us-east-1`)
-   - `USERS_TABLE` (DynamoDB table for user profiles)
-   - `CONVERSATIONS_TABLE` (DynamoDB table for conversations)
 
-#### Lambda API
+2. **Create Functions (first time only):**
+   ```bash
+   cd lambda-functions
+   
+   # Set up execution role first
+   export LAMBDA_EXECUTION_ROLE_ARN="arn:aws:iam::ACCOUNT_ID:role/college-hq-lambda-role"
+   
+   # Create all functions
+   ./create-functions.sh
+   ```
 
-- **Endpoint:** `POST /advising`
-- **Request Body:**
+3. **Set up API Gateway:**
+   - Follow the guide in `API_GATEWAY_SETUP.md`
+   - Configure routes to map to each Lambda function
+   - Set up JWT authorization with `auth-handler`
+
+4. **Configure Environment Variables:**
+   - Each Lambda function has specific environment variables
+   - See `API_GATEWAY_SETUP.md` for details
+
+#### API Endpoints
+
+**Profile Service:**
+- `GET /profile/{userId}` - Get user profile
+- `PUT /profile/{userId}` - Update user profile
+- `POST /profile/{userId}` - Create user profile
+
+**Advising Service:**
+- `POST /advising` - Send message to AI advisor
   ```json
   {
     "userId": "string",
@@ -94,24 +128,25 @@ src/
     "conversationId": "string (optional)"
   }
   ```
-- **Response:**
-  ```json
-  {
-    "agent": "advising",
-    "userId": "string",
-    "conversationId": "string",
-    "response": "string (AI response)",
-    "timestamp": "ISO string"
-  }
-  ```
+
+**Course Service:**
+- `GET /courses` - Get courses with filters
+- `GET /courses/{courseId}` - Get specific course
+- `POST /courses/search` - Search courses with context
+- `GET /degree-requirements/{majorId}` - Get degree requirements
+
+**Conversation Service:**
+- `GET /conversations/{userId}` - List user conversations
+- `POST /conversations` - Create new conversation
+- `POST /conversations/message` - Store conversation message
 
 #### Local Testing
 
-- Run the Lambda locally:
-  ```bash
-  node index.js
-  ```
-- Edit the test block in `index.js` to simulate requests
+Each Lambda function can be tested individually:
+```bash
+cd lambda-functions/[service-name]
+npm test
+```
 
 ---
 
@@ -138,16 +173,6 @@ CONVERSATIONS_TABLE=college-hq-conversations
 - Log in to the frontend and navigate to the Advising page
 - Start a conversation with the AI advisor
 - All messages and context are stored in DynamoDB for continuity
-
----
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a new Pull Request
 
 ---
 

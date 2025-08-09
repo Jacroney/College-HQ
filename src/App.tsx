@@ -9,33 +9,38 @@ import Profile from './pages/Profile';
 import Schedule from './pages/Schedule';
 import NotFound from './pages/NotFound';
 import Advising from './pages/Advising';
+import ErrorBoundary from './components/ErrorBoundary';
 import { CourseProvider } from './context/CourseContext';
 import { ProfileProvider } from './context/ProfileContext';
 import { AuthProvider } from './contexts/AuthContext';
 
 const App: React.FC = () => {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <AuthProvider>
-        <ProfileProvider>
-          <CourseProvider>
-            <Router>
-              <Routes>
-                <Route path="/" element={<Navigation />}>
-                  <Route index element={<Navigate to="/dashboard" replace />} />
-                  <Route path="dashboard" element={<Dashboard />} />
-                  <Route path="profile" element={<Profile />} />
-                  <Route path="schedule" element={<Schedule />} />
-                  <Route path="advising" element={<Advising />} />
-                </Route>
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Router>
-          </CourseProvider>
-        </ProfileProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <AuthProvider>
+          <ProfileProvider>
+            <CourseProvider>
+              <Router>
+                <ErrorBoundary>
+                  <Routes>
+                    <Route path="/" element={<Navigation />}>
+                      <Route index element={<Navigate to="/dashboard" replace />} />
+                      <Route path="dashboard" element={<Dashboard />} />
+                      <Route path="profile" element={<Profile />} />
+                      <Route path="schedule" element={<Schedule />} />
+                      <Route path="advising" element={<Advising />} />
+                    </Route>
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </ErrorBoundary>
+              </Router>
+            </CourseProvider>
+          </ProfileProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 };
 

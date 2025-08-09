@@ -21,12 +21,9 @@ import {
   Assignment as AssignmentIcon,
   Psychology as PsychologyIcon,
   Refresh as RefreshIcon,
-  TrendingUp as TrendingUpIcon,
   Notifications as NotificationsIcon,
-  Bookmark as BookmarkIcon,
 } from '@mui/icons-material';
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 const DashboardContainer = styled(Box)(({ theme }) => ({
   padding: theme.spacing(3),
@@ -105,7 +102,7 @@ interface WidgetData {
   error?: string;
 }
 
-const createSampleData = (navigate: (path: string) => void, theme: any) => [
+const createSampleData = () => [
     {
       id: 1,
       title: 'Upcoming Classes',
@@ -158,7 +155,6 @@ const createSampleData = (navigate: (path: string) => void, theme: any) => [
 
 const Dashboard = () => {
   const theme = useTheme();
-  const navigate = useNavigate();
   const [widgets, setWidgets] = useState<WidgetData[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -167,7 +163,7 @@ const Dashboard = () => {
     setRefreshing(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 800));
-      const sampleData = createSampleData(navigate, theme);
+      const sampleData = createSampleData();
       setWidgets(sampleData);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -175,7 +171,7 @@ const Dashboard = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [navigate, theme]);
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -191,7 +187,7 @@ const Dashboard = () => {
       <DashboardContainer>
         <PageHeader>
           <Box>
-            <PageTitle variant="h4" component="h1">
+            <PageTitle variant="h4">
               Dashboard
             </PageTitle>
             <Typography variant="body1" color="text.secondary">
