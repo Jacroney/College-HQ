@@ -1,25 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { fetchAuthSession, signOut } from 'aws-amplify/auth';
 import { env } from '../config/env';
-
-// Get the current user's ID token from Cognito
-const getAuthToken = async () => {
-  try {
-    const session = await fetchAuthSession();
-    return session.tokens?.idToken?.toString() || null;
-  } catch (error) {
-    // Error fetching auth token
-    return null;
-  }
-};
-
-const clearAuthToken = async () => {
-  try {
-    await signOut();
-  } catch (error) {
-    // Error clearing auth session
-  }
-};
 
 // Use API URL from environment configuration
 const API_URL = env.apiUrl;
@@ -28,16 +8,15 @@ const api: AxiosInstance = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   },
+  withCredentials: true,
 });
 
-// Request interceptor to add auth token
+// Request interceptor
 api.interceptors.request.use(
-  async (config: InternalAxiosRequestConfig) => {
-    const token = await getAuthToken();
-    if (token) {
-      config.headers.set('Authorization', `Bearer ${token}`);
-    }
+  (config: InternalAxiosRequestConfig) => {
+    // Add any necessary headers here if needed
     return config;
   },
   (error: AxiosError) => {
@@ -48,35 +27,12 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
-  async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
-    
-    // Handle 401 Unauthorized responses
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      
-      try {
-        // Cognito automatically refreshes tokens when calling fetchAuthSession
-        const token = await getAuthToken();
-        
-        if (token) {
-          // Retry the original request with the refreshed token
-          if (originalRequest.headers) {
-            originalRequest.headers.set('Authorization', `Bearer ${token}`);
-          }
-          return api(originalRequest);
-        } else {
-          // No valid session, clear auth and redirect to login
-          await clearAuthToken();
-          window.location.href = '/';
-          return Promise.reject(new Error('Authentication required'));
-        }
-      } catch (refreshError) {
-        // Failed to refresh token, clear auth and redirect
-        await clearAuthToken();
-        window.location.href = '/';
-        return Promise.reject(refreshError);
-      }
+  (error: AxiosError) => {
+    // Handle errors as needed
+    if (error.response?.status === 401) {
+      // Redirect to login if unauthorized
+      window.location.href = '/';
+      return Promise.reject(new Error('Authentication required'));
     }
     
     return Promise.reject(error);
@@ -111,19 +67,17 @@ export interface ApiEvent {
   courseId?: string;
 }
 
-// Profile API - Updated for new profile-service
+// Profile API
 export const profileApi = {
-  // Get user profile (userId from JWT token in backend)
   getProfile: (userId: string) => api.get<{profile: ApiUser}>(`/profile/${userId}`),
   updateProfile: (userId: string, userData: Partial<ApiUser>) => 
     api.put<{profile: ApiUser}>(`/profile/${userId}`, userData),
-  // Create user profile 
   createProfile: (userId: string, userData: Partial<ApiUser>) => 
     api.post<{profile: ApiUser}>(`/profile/${userId}`, userData),
   deleteProfile: (userId: string) => api.delete(`/profile/${userId}`),
 };
 
-// Courses API - Updated for new course-service
+// Courses API
 export const coursesApi = {
   // Get courses with filters
   getAll: (params?: {
@@ -171,7 +125,7 @@ export const studyToolsApi = {
     api.get('/api/study/resources', subject ? { params: { subject } } : undefined),
 };
 
-// Dashboard API - for AWS backend integration
+// Dashboard API
 export const dashboardApi = {
   getAcademicOverview: () => api.get('/api/dashboard/academic'),
   getUpcomingAssignments: () => api.get('/api/dashboard/assignments'),
@@ -180,7 +134,7 @@ export const dashboardApi = {
   getCareerGoals: () => api.get('/api/dashboard/career-goals'),
 };
 
-// Advising API - Updated for new advising-service
+// Advising API
 export const advisingApi = {
   // Send message to AI advisor
   sendMessage: (data: {
@@ -202,7 +156,7 @@ export const advisingApi = {
   }>('/advising', data),
 };
 
-// Conversation API - New conversation-service
+// Conversation API
 export const conversationApi = {
   // Create new conversation
   createConversation: (data: {
@@ -232,13 +186,5 @@ export const conversationApi = {
   }) => api.post('/conversations/message', data),
 };
 
-// College planning API - Deprecated, use coursesApi instead
-export const planningApi = {
-  getDegreeRequirements: (majorId: string) => coursesApi.getDegreeRequirements(majorId),
-  getCourseCatalog: (params?: any) => coursesApi.getAll(params),
-  checkPrerequisites: (courseId: string) => coursesApi.getById(courseId),
-  getGraduationPlan: (majorId: string) => coursesApi.getFlowchart(majorId),
-  saveGraduationPlan: (plan: object) => api.post('/planning/graduation-plan', plan),
-};
 
 export default api;

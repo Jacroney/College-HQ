@@ -18,8 +18,23 @@
       "Bash(./deploy.sh)",
       "Bash(zip:*)",
       "Bash(npx tsc:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(cp:*)",
+      "Bash(true)",
+      "Bash(npm run deploy:*)",
+      "Bash(./deploy-production.sh)",
+      "Bash(./deploy-all.sh)",
+      "Bash(npm start)",
+      "Bash(cat:*)",
+      "Bash(cd:*)",
+      "Bash(./setup-rest-api-gateway.sh:*)",
+      "Bash(git add:*)",
+      "Bash(git rm:*)",
+      "Bash(./update-cors.sh)",
+      "Bash(grep:*)"
     ],
-    "deny": []
+    "deny": [],
+    "defaultMode": "acceptEdits"
   }
 }

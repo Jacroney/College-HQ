@@ -11,14 +11,14 @@ Amplify.configure(awsconfig);
 
 // Listen to auth events
 Hub.listen('auth', (data) => {
-  console.log('🔄 Auth Hub Event:', data.payload.event, data.payload.data);
+  console.log('🔄 Auth Hub Event:', data.payload.event);
   
   if (data.payload.event === 'signInWithRedirect') {
     console.log('✅ Sign in with redirect successful');
   }
   
   if (data.payload.event === 'signInWithRedirect_failure') {
-    console.error('❌ Sign in with redirect failed:', data.payload.data);
+    console.error('❌ Sign in with redirect failed');
   }
   
   if (data.payload.event === 'signedIn') {
